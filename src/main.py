@@ -2,33 +2,16 @@ import argparse
 import os
 import tensorflow as tf
 
+from input import get_input_fn
+
 def get_model_fn():
     """Creates a model function that builds the net and manages estimator specs."""
     
-    def _model_fn():
+    def _model_fn(features, labels, mode, params):
         """Builds the network model."""
         pass
 
     return _model_fn
-
-def get_input_fn(mode=None):
-    """Creates an input function that loads the dataset and prepares it for use."""
-
-    def _input_fn(mode=None, params=None):
-        """
-        Returns:
-            An (one-shot) iterator containing (data, label) tuples
-        """
-        with tf.device('/cpu:0'):
-            if mode == 'train':
-                dataset = None
-            elif mode == 'eval' or mode == 'predict':
-                dataset = None
-            else:
-                raise ValueError('_input_fn received invalid MODE')
-        return dataset
-
-    return _input_fn
 
 def build_estimator(run_config, hparams):
     """Builds the estimator object and returns it."""
