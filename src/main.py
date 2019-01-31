@@ -1,15 +1,37 @@
 import argparse
-import os
+import os, sys
 import tensorflow as tf
 
+# pylint: disable=E0401
 from input import get_input_fn
+# from model_da import DecomposibleAttentionModel
+from model_fnc import SimpleBaselineModel
 
 def get_model_fn():
-    """Creates a model function that builds the net and manages estimator specs."""
+    """
+    Creates a model function that builds the net and manages estimator specs.
+    
+    Returns:
+        a model function that fulfills the requirements for estimators
+    """
     
     def _model_fn(features, labels, mode, params):
-        """Builds the network model."""
-        pass
+        """
+        Builds the network model.
+        
+        Parameters:
+            features:   feature vector passed from the input_fn
+            labels:     label vector passed from the input_fn
+            mode:       instance of tf.estimator.ModeKeys to denote current mode of execution
+            params:     optional commandline parameters
+        """
+        model = SimpleBaselineModel(features, labels, mode, params)
+
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            return tf.estimator.EstimatorSpec(mode, predictions=model.predictions)
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            return tf.estimator.EstimatorSpec(mode, loss=model.loss, train_op=model.train_op)
+        return tf.estimator.EstimatorSpec(mode, loss=model.loss, eval_metric_ops=model.eval_metric_ops)
 
     return _model_fn
 
@@ -89,12 +111,12 @@ if __name__ == '__main__':
         default=1,
         help='Number of scheduled repeats this job should run for.',
         dest='repeats')
-    # parser.add_argument(
-    #     '-d', '--logit-dimensions',
-    #     type=int,
-    #     required=True,
-    #     help='Dimension of network logits',
-    #     dest='logit_dims')
+    parser.add_argument(
+        '-d', '--logit-dimensions',
+        type=int,
+        required=True,
+        help='Dimension of network logits',
+        dest='logit_dims')
     parser.add_argument(
         '-n', '--num-gpus',
         type=int,
