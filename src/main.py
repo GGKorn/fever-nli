@@ -60,7 +60,7 @@ def main(**hparams):
         tf.logging.info('Commencing iteration {} of {}.'.format((i+1), hparams['repeats']))
 
         config = tf.estimator.RunConfig(
-            model_dir=os.path.join(hparams['output_dir'], '{}-{}'.format(str(hparams['job_id']), str(i+1))),
+            model_dir=os.path.abspath(os.path.join(hparams['output_dir'], '{}-{}'.format(str(hparams['job_id']), str(i+1)))),
             tf_random_seed=None,
             save_summary_steps=100,
             save_checkpoints_steps=1000,
