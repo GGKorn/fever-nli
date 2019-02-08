@@ -54,7 +54,7 @@ class SimpleBaselineModel(object):
                 l2_penalty = tf.multiply(tf.add_n(l2_coefficients), self.l2_lambda)
 
             # calculate base xentropy loss, add l2 penalty in case of TRAIN
-            xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits, self.labels)
+            xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels)
             xentropy = xentropy + l2_penalty if mode == tf.estimator.ModeKeys.TRAIN else xentropy
             self.loss = tf.reduce_sum(xentropy, name='loss_xentropy')
 
@@ -74,7 +74,7 @@ class SimpleBaselineModel(object):
         with tf.variable_scope('optimisation'):
             # init optimiser, compute gradients, apply clipping during TRAIN
             optimizer = tf.train.AdamOptimizer(learning_rate=self.hparams.learning_rate)
-            gradients = optimizer.compute_gradients(self.loss, tf.trainable_variables())
+            gradients, variables = zip(*optimizer.compute_gradients(self.loss))
             if self.clip_gradients:
                 gradients, _ = tf.clip_by_global_norm(gradients, self.clip_norm)
-            self.train_op = optimizer.apply_gradients(gradients, global_step=tf.train.get_global_step())
+            self.train_op = optimizer.apply_gradients(zip(gradients, variables), global_step=tf.train.get_global_step())
