@@ -1,11 +1,12 @@
 import argparse
 import os, sys
 import tensorflow as tf
+import inspect
 
-# pylint: disable=E0401
+# pylint: disable=undefined-variable, import-error
 from input import get_input_fn
-# from model_da import DecomposibleAttentionModel
 from model_fnc import SimpleBaselineModel
+from model_da import DecomposibleAttentionModel
 
 def get_model_fn():
     """
@@ -14,7 +15,7 @@ def get_model_fn():
     Returns:
         a model function that fulfills the requirements for estimators
     """
-    
+
     def _model_fn(features, labels, mode, params):
         """
         Builds the network model.
@@ -25,7 +26,10 @@ def get_model_fn():
             mode:       instance of tf.estimator.ModeKeys to denote current mode of execution
             params:     optional commandline parameters
         """
-        model = SimpleBaselineModel(features, labels, mode, params)
+        if param.model_type == 1: # MLP model
+            model = SimpleBaselineModel(features, labels, mode, params)
+        else:
+            model = DecomposibleAttentionModel(features, labels, mode, params)
 
         if mode == tf.estimator.ModeKeys.PREDICT:
             return tf.estimator.EstimatorSpec(mode, predictions=model.predictions)
@@ -42,6 +46,7 @@ def build_estimator(run_config, hparams):
            params=hparams)
 
 def main(**hparams):
+    """Executes main routine of the program: Initialise model presets, build estimator, train and evaluate model."""
     # Initialise TF logging
     tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -59,18 +64,20 @@ def main(**hparams):
     for i in range(hparams['repeats']):
         tf.logging.info('Commencing iteration {} of {}.'.format((i+1), hparams['repeats']))
 
+        # configuration parameters for estimator execution
         config = tf.estimator.RunConfig(
             model_dir=os.path.abspath(os.path.join(hparams['output_dir'], '{}-{}'.format(str(hparams['job_id']), str(i+1)))),
             tf_random_seed=None,
-            save_summary_steps=100,
-            save_checkpoints_steps=1000,
+            save_summary_steps=100, # write 'debug' summaries every 100 steps
+            save_checkpoints_steps=1000, # save weights & parameters every 1000 steps
             save_checkpoints_secs=None,
             session_config=session_config,
-            keep_checkpoint_max=int(hparams['train_steps']/1000)+1,
-            keep_checkpoint_every_n_hours=10000,
+            keep_checkpoint_max=int(hparams['train_steps']/1000)+1, # keep exactly as much checkpoints as will be generated
+            keep_checkpoint_every_n_hours=10000, # never remove checkpoints because of age
             log_step_count_steps=100
         )
 
+        # build estimator object
         classifier = build_estimator(
             run_config=config,
             hparams=tf.contrib.training.HParams(**hparams)
@@ -87,6 +94,13 @@ def main(**hparams):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-m', '--model',
+        type=int,
+        choices=[1,2],
+        required=True,
+        help='Specifies the model to execute: 1/MLP, 2/DA',
+        dest='model_type')
     parser.add_argument(
         '-i', '--data-dir',
         type=str,
