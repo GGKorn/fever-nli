@@ -26,7 +26,7 @@ def get_model_fn():
             mode:       instance of tf.estimator.ModeKeys to denote current mode of execution
             params:     optional commandline parameters
         """
-        if param.model_type == 1: # MLP model
+        if params.model_type == 1: # MLP model
             model = SimpleBaselineModel(features, labels, mode, params)
         else:
             model = DecomposibleAttentionModel(features, labels, mode, params)
@@ -50,6 +50,7 @@ def main(**hparams):
     # Initialise TF logging
     tf.logging.set_verbosity(tf.logging.INFO)
 
+    # log command line arguments for posterity
     tf.logging.info('Using arguments: {}\n'.format(str(hparams)))
 
     # Prepare ConfigProto object with several device settings
