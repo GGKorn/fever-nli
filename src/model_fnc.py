@@ -10,6 +10,7 @@ class SimpleBaselineModel(object):
         self.l2_lambda = 0.00001
         self.clip_gradients = True
         self.clip_norm = 5
+        self.dropout_keep_prob = 0.6
 
         with tf.name_scope('inputs'):
             self.inputs = features
@@ -26,55 +27,56 @@ class SimpleBaselineModel(object):
         Parameters:
             mode:   tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes purpose of current run
         """
-        with tf.variable_scope('hidden_layer'):
-            # hidden layer
-            model = tf.layers.dense(self.inputs, 
-                                    self.hidden_units,
-                                    activation=tf.nn.relu,
-                                    kernel_initializer=tf.keras.initializers.he_uniform(),
-                                    name='dense01')
-            # 1st dropout
-            model = tf.nn.dropout(model, self.hparams.dropout_keep_prob)
-        
-        with tf.variable_scope('output_layer'):
-            # output layer
-            model = tf.layers.dense(model,
-                                    self.hparams.logit_dims,
-                                    activation=None,
-                                    name='logits')
-            # 2nd dropout, god knows why...
-            model = tf.nn.dropout(model, self.hparams.dropout_keep_prob)
-            self.logits = tf.reshape(model, [self.hparams.batch_size, self.hparams.logit_dims])
+        with tf.variable_scope('model'):
+            with tf.variable_scope('hidden_layer'):
+                # hidden layer
+                model = tf.layers.dense(self.inputs, 
+                                        self.hidden_units,
+                                        activation=tf.nn.relu,
+                                        kernel_initializer=tf.keras.initializers.he_uniform(),
+                                        name='dense01')
+                # 1st dropout
+                model = tf.nn.dropout(model, self.dropout_keep_prob)
+            
+            with tf.variable_scope('output_layer'):
+                # output layer
+                model = tf.layers.dense(model,
+                                        self.hparams.logit_dims,
+                                        activation=None,
+                                        name='logits')
+                # 2nd dropout, god knows why...
+                model = tf.nn.dropout(model, self.dropout_keep_prob)
+                self.logits = tf.reshape(model, [self.hparams.batch_size, self.hparams.logit_dims])
 
-        # objective ops
-        with tf.variable_scope('objective'):
-            if mode == tf.estimator.ModeKeys.TRAIN:
-                # gather l2 coefficients and compute penalty
-                l2_coefficients = [tf.nn.l2_loss(var) for var in tf.trainable_variables() if 'bias' not in var.name]
-                l2_penalty = tf.multiply(tf.add_n(l2_coefficients), self.l2_lambda)
+            # objective ops
+            with tf.variable_scope('objective'):
+                if mode == tf.estimator.ModeKeys.TRAIN:
+                    # gather l2 coefficients and compute penalty
+                    l2_coefficients = [tf.nn.l2_loss(var) for var in tf.trainable_variables() if 'bias' not in var.name]
+                    l2_penalty = tf.multiply(tf.add_n(l2_coefficients), self.l2_lambda)
 
-            # calculate base xentropy loss, add l2 penalty in case of TRAIN
-            xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels)
-            xentropy = xentropy + l2_penalty if mode == tf.estimator.ModeKeys.TRAIN else xentropy
-            self.loss = tf.reduce_sum(xentropy, name='loss_xentropy')
+                # calculate base xentropy loss, add l2 penalty in case of TRAIN
+                xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels)
+                xentropy = xentropy + l2_penalty if mode == tf.estimator.ModeKeys.TRAIN else xentropy
+                self.loss = tf.reduce_sum(xentropy, name='loss_xentropy')
 
-            # PREDICT EstimatorSpec
-            predicted_classes = tf.argmax(self.logits, 1)
-            self.predictions = {
-                'class': predicted_classes,
-                'prob': tf.nn.softmax(self.logits)
-            }
+                # PREDICT EstimatorSpec
+                predicted_classes = tf.argmax(self.logits, 1)
+                self.predictions = {
+                    'class': predicted_classes,
+                    'prob': tf.nn.softmax(self.logits)
+                }
 
-            # EVAL EstimatorSpec
-            self.eval_metric_ops = {
-                'accuracy': tf.metrics.accuracy(
-                    labels=self.labels, predictions=predicted_classes)
-            }
+                # EVAL EstimatorSpec
+                self.eval_metric_ops = {
+                    'accuracy': tf.metrics.accuracy(
+                        labels=self.labels, predictions=predicted_classes)
+                }
 
-        with tf.variable_scope('optimisation'):
-            # init optimiser, compute gradients, apply clipping during TRAIN
-            optimizer = tf.train.AdamOptimizer(learning_rate=self.hparams.learning_rate)
-            gradients, variables = zip(*optimizer.compute_gradients(self.loss))
-            if self.clip_gradients:
-                gradients, _ = tf.clip_by_global_norm(gradients, self.clip_norm)
-            self.train_op = optimizer.apply_gradients(zip(gradients, variables), global_step=tf.train.get_global_step())
+            with tf.variable_scope('optimisation'):
+                # init optimiser, compute gradients, apply clipping during TRAIN
+                optimizer = tf.train.AdamOptimizer(learning_rate=self.hparams.learning_rate)
+                gradients, variables = zip(*optimizer.compute_gradients(self.loss))
+                if self.clip_gradients:
+                    gradients, _ = tf.clip_by_global_norm(gradients, self.clip_norm)
+                self.train_op = optimizer.apply_gradients(zip(gradients, variables), global_step=tf.train.get_global_step())
