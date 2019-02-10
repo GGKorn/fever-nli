@@ -62,8 +62,7 @@ class DecomposibleAttentionModel(object):
 
                 # EVAL EstimatorSpec
                 self.eval_metric_ops = {
-                    # 'accuracy': tf.metrics.accuracy(
-                    #     labels=self.labels, predictions=predicted_classes)
+                    'accuracy': tf.metrics.accuracy(labels=tf.argmax(self.labels, 1), predictions=predicted_classes)
                 }
 
             with tf.variable_scope('optimisation'):
