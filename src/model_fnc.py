@@ -58,7 +58,7 @@ class SimpleBaselineModel(object):
                 # calculate base xentropy loss, add l2 penalty in case of TRAIN
                 xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels)
                 xentropy = xentropy + l2_penalty if mode == tf.estimator.ModeKeys.TRAIN else xentropy
-                self.loss = tf.reduce_sum(xentropy, name='loss_xentropy')
+                self.loss = tf.reduce_mean(xentropy, name='loss_xentropy')
 
                 # PREDICT EstimatorSpec
                 predicted_classes = tf.argmax(self.logits, 1)
