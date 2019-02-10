@@ -169,12 +169,6 @@ if __name__ == '__main__':
         help="""\
         This is the inital learning rate value.""",
         dest='learning_rate')
-    parser.add_argument(
-        '-p', '--dropout-keep-prob',
-        type=float,
-        default=0.6,
-        help="Dropout keep probability",
-        dest='dropout_keep_prob')
     args = parser.parse_args()
 
     main(**vars(args))
