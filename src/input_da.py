@@ -1,7 +1,12 @@
 import tensorflow as tf
 import pandas as pd
 import json
-from sklearn.feature_extraction.text import TfidfVectorizer as tf_vec
+from sklearn.feature_extraction.text import TfidfVectorizer as TFIDFVec
+from sklearn.feature_extraction.text import CountVectorizer as TFVec
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+VERBOSE = True
 
 def get_input_fn(mode=None):
     """Creates an input function that loads the dataset and prepares it for use."""
@@ -36,7 +41,7 @@ def get_input_fn_nli(mode=None):
         """
         with tf.device('/cpu:0'):
             if mode == 'train':
-                ds_gen = load_nli("example_train.csv")
+                ds_gen = load_nli("example_train.")
             elif mode == 'eval' or mode == 'predict':
                 ds_gen = load_nli("example_dev.csv")
             else:
@@ -55,7 +60,6 @@ def get_input_fn_nli(mode=None):
 
 def load_nli(file):
     """
-    Only yields verifiable
     yields the data of next claim in order: claim, evidences, label
     :param file:
     :return:
@@ -64,46 +68,49 @@ def load_nli(file):
     with open(file, "r") as read_file:
         data = json.load(read_file)
 
-    #with open(file, "r") as json_file:
-    #    print(json.load(json_file))
-    #print("loaded {} data\ndata shape: {}".format(file, len(dict)))
-    #print(dict)
-    vectorizer = get_vectorizer(data)
+    claims,evidences,documents,labels = get_claim_evidence_pairs(data)
+
+    tf_vec = TFVec(stop_words="english", max_features=5000).fit(documents)
+    tfidf_vec = TFIDFVec(stop_words="english", max_features=5000).fit(documents)
+    # TODO: store it, so can be called during testing
+    del documents
+    tf_claims = tf_vec.transform(claims)
+    tf_evidences = tf_vec.transform(evidences)
+    tfidf_claims = tfidf_vec.transform(claims)
+    tfidf_evidences = tfidf_vec.transform(evidences)
+    tfidf_sims = cosine_similarity(tfidf_claims,tfidf_evidences)
+    del tfidf_claims, tfidf_evidences
 
 
-    # for row in df:
-    #     #TODO: see if verifiable is in NLI dataset
-    #     if row["VERIFIABLE"]:
-    #         # see paper: p. 3 A_simple_but_tough_to_beat_baseline
-    #         yield None# tf_headline, tf_body, cosin-sim(tf_headline,tf_body)
+    for tf_claim, tf_evidence,tfidf_sim,label  in zip(tf_claims,tf_evidences, tfidf_sims,labels):
+        # see paper: p. 3 A_simple_but_tough_to_beat_baseline
+        yield tf_claim, tfidf_sim, tf_evidence, label
 
-
-
-
-
-def get_vectorizer(dict, mode="concat"):
+def get_claim_evidence_pairs(dict, mode="concat", concat_evidence=True):
     print("\nclaim\n", dict["claim"], "\n\nevidence\n", dict["evidence"])
-    document_list = []
+
+    claim_list, evidence_list, label_list, document_list = [], [], [], []
     for claim_set in dict:
-        concat = claim_set["claim"]
+        # get evidence
+        concat = ""
         for evidence in claim_set["evidence"]:
             concat += evidence
-        print(concat)
+        if concat_evidence:
+            evidence_list.append(concat)
+        else:
+            evidence_list.append(claim_set["evidence"])
+        # get claim
+        claim_list.append(claim_set["claim"])
+        # get whole document
+        concat += claim_set["claim"]
         document_list.append(concat)
-    # claim_list = []
-    # old_colname = None
-    # for colname in ["claim","evidence"]:
-    #     print(colname)
-    #     if old_colname == None:
-    #         concat = df[colname] + df[colname]
-    #         print(concat)
-    #         #" ".format([r for r in row])
-    #    old_colname = colname
+        # get labels
+        label_list = claim_set["label"]
+
+    return claim_list, evidence_list, document_list, label_list
 
 
 
-
-    return tf_vec.fit(document_list)
 
 #TODO: how to integrate word embedding transform
 
