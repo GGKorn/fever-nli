@@ -4,7 +4,7 @@ import json
 from sklearn.feature_extraction.text import TfidfVectorizer as TFIDFVec
 from sklearn.feature_extraction.text import CountVectorizer as TFVec
 from sklearn.metrics.pairwise import cosine_similarity
-
+import gensim
 
 VERBOSE = True
 
@@ -86,6 +86,25 @@ def load_nli(file):
         # see paper: p. 3 A_simple_but_tough_to_beat_baseline
         yield tf_claim, tfidf_sim, tf_evidence, label
 
+
+
+def load_fever(file,wordemb_path,concat_evidence):
+    print("Loading pre-trained embedding", wordemb_path)
+
+    with open(file, "r") as read_file:
+        data = json.load(read_file)
+    claims, evidences, documents, labels = get_claim_evidence_pairs(data,concat_evidence)
+
+    # deprecated: gensim.models.Word2Vec.load_word2vec_format(wordemb_path, binary=True)
+    vectors = gensim.models.Word2Vec.load_word2vec_format(wordemb_path, binary=True)
+
+    we_claims, we_evidences = [],[]
+
+    for we_claim, we_evidence, label  in zip(we_claims,we_evidences, labels):
+        # see paper: p. 3 A_simple_but_tough_to_beat_baseline
+        yield we_claim , we_evidence, label
+
+
 def get_claim_evidence_pairs(dict, mode="concat", concat_evidence=True):
     print("\nclaim\n", dict["claim"], "\n\nevidence\n", dict["evidence"])
 
@@ -124,9 +143,9 @@ def get_input_fn_fever(mode=None):
         """
         with tf.device('/cpu:0'):
             if mode == 'train':
-                ds_gen = load_fever_chunk("example_train.csv",chunk_size=2)
+                ds_gen = load_fever("example_train.csv",chunk_size=2)
             elif mode == 'eval' or mode == 'predict':
-                ds_gen = load_fever_chunk("example_dev.csv", chunk_size=2)
+                ds_gen = load_fever("example_dev.csv", chunk_size=2)
             else:
                 raise ValueError('_input_fn received invalid MODE')
 
@@ -140,21 +159,6 @@ def get_input_fn_fever(mode=None):
         return dataset.make_one_shot_iterator().get_next()
 
     return _input_fn
-
-def load_fever_chunk(file,chunk_size=1000):
-    """
-    Fever specific data set loading by chunks
-    :param file:
-    :param chunk_size:
-    :return:
-    """
-    #TODO: Treat special case: len(file) not dividable by chunk_size
-
-    # pd.read_csv('pandas_dataframe_importing_csv/example.csv', na_values=sentinels, skiprows=3)
-    # pd.read_csv('pandas_dataframe_importing_csv/example.csv', na_values=sentinels, skipfooter=2)
-
-    for begin,end in []:
-        df = pd.read_csv(file, skiprows=begin, skipfooter=end)
 
 
 
