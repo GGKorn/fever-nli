@@ -32,7 +32,7 @@ def main():
 
 
     # create csv to write to (split into train, test, eval sets)
-    with open('train_data.csv', 'w+') as tr_data, open('test_data.csv', 'w+') as te_data, open('eval_data.csv', 'w+') as ev_data:
+    with open('train_data_vanilla.csv', 'w+') as tr_data, open('test_data_vanilla.csv', 'w+') as te_data, open('eval_data_vanilla.csv', 'w+') as ev_data:
         train_data = csv.writer(tr_data)
         test_data = csv.writer(te_data)
         eval_data = csv.writer(ev_data)
@@ -61,7 +61,10 @@ def main():
                         sentence_id = evidence[3]
                         if sentence_id is not None:
                             try:
-                                evidence_dict[id]['evidence'].append(wiki_data[normalize('NFC', article_name)][sentence_id].split('\t')[1])
+                                article_name = normalize('NFC', article_name)
+                                current_sentence = wiki_data[article_name][sentence_id].split('\t')[1]
+                                if current_sentence not in evidence_dict[id]['evidence']:
+                                    evidence_dict[id]['evidence'].append(current_sentence)
                                 #print("evidence_id:(", evidence_id, ")\narticle_name:(", article_name, ")\nsentence_id:(", sentence_id, ")")
                             except KeyError as e:
                                 print(article_name, ' is not in available evidence.')

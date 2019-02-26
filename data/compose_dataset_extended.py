@@ -21,6 +21,22 @@ def main():
         new_list = [x for x in some_list if x not in res]
         return res, new_list
 
+    # def normalize_sentence(encoded_sentence):
+    #     """
+    #     Input: sentence with encodings (string)
+    #     Output: normalized sentence (string)
+    #     """
+    #     sent = encoded_sentence.split(' ')
+    #     return ' '.join([normalize('NFD', s) for s in sent])
+
+    def extract_sentence_with_tags(nested_dictionary, article_id, sentence):
+        """
+        Inputs: nested dictionary with lists, article name (string), sentence (integer index)
+        Output: the desired sentence with its appropriate tags as a single string (separated by spaces rather than tab characters)
+        """
+        listed_data = nested_dictionary[article_id][sentence].split('\t')[1:]
+        return ' '.join(listed_data)
+
     # compile wiki files into one massive dictionary
     wiki_data = {}
     for i,f in enumerate(json_files):
@@ -61,12 +77,32 @@ def main():
                         # extended version of evidence: article name, tags appended
                         if sentence_id is not None:
                             try:
+                                #add article name to evidence
                                 article_name = normalize('NFC', article_name)
-                                wiki_sentence = wiki_data[article_name][sentence_id].split('\t')[1:]
-                                evidence_dict[id]['evidence'].append(' '.join(wiki_sentence))
                                 if article_name not in evidence_dict[id]['evidence']:
                                     evidence_dict[id]['evidence'].append(article_name)
-                            except KeyError as e:
+
+                                #add target sentence to evidence
+                                wiki_sentence = extract_sentence_with_tags(wiki_data, article_name, sentence_id)
+                                if wiki_sentence not in evidence_dict[id]['evidence']:
+                                    evidence_dict[id]['evidence'].append(wiki_sentence)
+
+                                #add surrounding sentences if not already present
+                                if sentence_id > 0:
+                                    prev_wiki_sentence = extract_sentence_with_tags(wiki_data, article_name, (sentence_id - 1))
+                                    if prev_wiki_sentence not in evidence_dict[id]['evidence']:
+                                        evidence_dict[id]['evidence'].append(prev_wiki_sentence)
+                                if sentence_id < (len(wiki_data[article_name]) - 1):
+                                    following_wiki_sentence = extract_sentence_with_tags(wiki_data, article_name, (sentence_id + 1))
+                                    if following_wiki_sentence not in evidence_dict[id]['evidence']:
+                                        evidence_dict[id]['evidence'].append(following_wiki_sentence)
+
+                                # add first sentence
+                                first_wiki_sentence = extract_sentence_with_tags(wiki_data, article_name, 0)
+                                if first_wiki_sentence not in evidence_dict[id]['evidence']:
+                                    evidence_dict[id]['evidence'].append(first_wiki_sentence)
+
+                            except KeyError:
                                 print(article_name, ' is not in available evidence.')
                                 pass
 
@@ -85,7 +121,7 @@ def main():
                 evidence_dict[id]['label'] = label
                 evidence_dict[id]['claim'] = j['claim']
 
-        # sort data into supports/refutes/nei
+        # sort data into supports/refutes/nei and get a list of those evidence ids
         for key, data in evidence_dict.items():
             if data['label'] == 1:
                 supports_dict[key] = data
@@ -97,7 +133,6 @@ def main():
         support_keys = list(supports_dict.keys())
         refute_keys = list(refutes_dict.keys())
         nei_keys = list(nei_dict.keys())
-        #print(len(support_keys), len(refute_keys), len(nei_keys))
 
         # separate data into test, eval, and train (eval and test should each have 14500 data entries; train gets the rest)
         n = 14500 // 3
@@ -116,6 +151,7 @@ def main():
         shuffle(eval_keys)
         shuffle(test_keys)
 
+        # write to each csv file
         files = [(train_keys, train_data), (eval_keys, eval_data), (test_keys, test_data)]
         for keys, file in files:
             for k in keys:
@@ -124,8 +160,6 @@ def main():
                 except KeyError as e:
                     print(e)
                     raise
-
-                #csv_data.writerow([int(id), verifiable, label, evidence_dict[id]['claim'], evidence_dict[id]['evidence_dict']])
 
 
 if __name__ == '__main__':
