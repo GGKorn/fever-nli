@@ -88,7 +88,7 @@ def load_nli(file):
 
 
 
-def load_fever(file,wordemb_path,concat_evidence):
+def load_fever(file,wordemb_path,concat_evidence=True):
     print("Loading pre-trained embedding", wordemb_path)
 
     with open(file, "r") as read_file:
@@ -99,10 +99,10 @@ def load_fever(file,wordemb_path,concat_evidence):
     vectors = gensim.models.Word2Vec.load_word2vec_format(wordemb_path, binary=True)
 
     we_claims, we_evidences = [],[]
-
+    longest_evidence = None
     for we_claim, we_evidence, label  in zip(we_claims,we_evidences, labels):
         # see paper: p. 3 A_simple_but_tough_to_beat_baseline
-        yield we_claim , we_evidence, label
+        yield we_claim , we_evidence, label, longest_evidence
 
 
 def get_claim_evidence_pairs(dict, mode="concat", concat_evidence=True):
@@ -143,9 +143,9 @@ def get_input_fn_fever(mode=None):
         """
         with tf.device('/cpu:0'):
             if mode == 'train':
-                ds_gen = load_fever("example_train.csv",chunk_size=2)
+                ds_gen = load_fever("example_train.csv",Embedding_Path)
             elif mode == 'eval' or mode == 'predict':
-                ds_gen = load_fever("example_dev.csv", chunk_size=2)
+                ds_gen = load_fever("example_dev.csv",Embedding_Path)
             else:
                 raise ValueError('_input_fn received invalid MODE')
 
@@ -164,5 +164,6 @@ def get_input_fn_fever(mode=None):
 
 
 if __name__ == "__main__":
+    Embedding_Path = None
     a = load_nli(file="/workData/Uni/NLP/project/fever-nli/data/example_train.csv")
     print(a)
