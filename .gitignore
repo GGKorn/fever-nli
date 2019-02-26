@@ -1,3 +1,8 @@
+# dataset path exceptions
+wiki-pages/
+unsorted_vanilla_batched_wiki_data/
+train_data/
+
 # network output directories
 summaries/
 out_files/
