@@ -65,10 +65,8 @@ def load_nli(file):
     :return:
     """
 
-    with open(file, "r") as read_file:
-        data = json.load(read_file)
 
-    claims,evidences,documents,labels = get_claim_evidence_pairs(data)
+    claims,evidences,documents,labels = get_claim_evidence_pairs(file)
 
     tf_vec = TFVec(stop_words="english", max_features=5000).fit(documents)
     tfidf_vec = TFIDFVec(stop_words="english", max_features=5000).fit(documents)
@@ -105,26 +103,23 @@ def load_fever(file,wordemb_path,concat_evidence=True):
         yield we_claim , we_evidence, label, longest_evidence
 
 
-def get_claim_evidence_pairs(dict, mode="concat", concat_evidence=True):
-    print("\nclaim\n", dict["claim"], "\n\nevidence\n", dict["evidence"])
+def get_claim_evidence_pairs(file, concat_evidence=True):
 
-    claim_list, evidence_list, label_list, document_list = [], [], [], []
-    for claim_set in dict:
-        # get evidence
-        concat = ""
-        for evidence in claim_set["evidence"]:
-            concat += evidence
-        if concat_evidence:
-            evidence_list.append(concat)
-        else:
-            evidence_list.append(claim_set["evidence"])
-        # get claim
-        claim_list.append(claim_set["claim"])
-        # get whole document
-        concat += claim_set["claim"]
-        document_list.append(concat)
-        # get labels
-        label_list = claim_set["label"]
+    # converters: dict, optional
+    #
+    # Dict of functions for converting values in certain columns. Keys can either be integers or column labels.
+    if concat_evidence:
+        concatenate = lambda x: x
+        converters = {"evidence" : concatenate}
+    data_frame = pd.read_csv(file)
+    print("\nclaims\n", data_frame["claim"], "\n\nevidences\n", data_frame["evidence"])
+
+    data_frame.
+    claim_list = list(data_frame["claim"])
+    label_list = list(data_frame["label"])
+
+    evidence_list, document_list = [], []
+    document_list = data_frame["evidence"] + data_frame["claim"]
 
     return claim_list, evidence_list, document_list, label_list
 
