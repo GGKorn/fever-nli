@@ -102,7 +102,7 @@ def main():
                                 if first_wiki_sentence not in evidence_dict[id]['evidence']:
                                     evidence_dict[id]['evidence'].append(first_wiki_sentence)
 
-                            except KeyError as e:
+                            except KeyError:
                                 print(article_name, ' is not in available evidence.')
                                 pass
 
