@@ -8,8 +8,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 import gensim
 from ast import literal_eval
 import os
+import scipy
 
-debug = 2000
+
+debug = 20000
 TrainingPath = "train_data_vanilla.csv"
 EvalPath = "eval_data_vanilla.csv"
 TestPath = "test_data_vanilla.csv"
@@ -57,7 +59,7 @@ def get_input_fn_nli(mode=None):
             #TODO: lookup tf.<data.type> and shape for these textdata/ask Ben
             dataset = tf.data.Dataset.from_generator(
                 generator = ds_gen,
-                output_types = (tf.float64,tf.int, tf.float64 ,tf.int),
+                output_types = (tf.float64 ,tf.int32),
                 # batch_size, 10.001 # batchsize 500
                 output_shapes = ([500, 10001],[500])
             )
@@ -96,10 +98,16 @@ def load_nli(file):
     for batch_end  in range(500,len(claims),nli_batch_size):
         # see paper: p. 3 A_simple_but_tough_to_beat_baseline
 
-        print(tfidf_claims[batch_start:batch_end, ].shape)
-        tfidf_sims = cosine_similarity(tfidf_claims[batch_start:batch_end,], tfidf_evidences[batch_start:batch_end,])
 
-        yield np.concatenate((tf_claims[batch_start:batch_end,], np.array(tfidf_sims), tf_evidences[batch_start:batch_end,])), labels[batch_start:batch_end]
+        # TODO: find how to get diagonal out of  n_samples_X, n_samples_Y matrix
+        #  cosine_similarity returns An array with shape (n_samples_X, n_samples_Y).
+        tfidf_sims = np.diag(cosine_similarity(tfidf_claims[batch_start:batch_end,], tfidf_evidences[batch_start:batch_end,]))
+
+        # TODO: check if concatenation works
+        #print(tf_claims[batch_start:batch_end,].shape,tfidf_sims.shape,tf_evidences[batch_start:batch_end,].shape)
+
+        yield scipy.sparse.hstack( (tf_claims[batch_start:batch_end,], np.reshape(tfidf_sims,(500,1)), tf_evidences[batch_start:batch_end,])) , labels[batch_start:batch_end]
+        batch_start = batch_end
 
 
 
@@ -186,6 +194,6 @@ if __name__ == "__main__":
     Embedding_Path = None
     local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
     for i,a in enumerate(load_nli(file=os.path.join(local_test_path,TrainingPath))):
-        if i > 1:
+        if i > 10:
             break
         print(i,a)
