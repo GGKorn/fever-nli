@@ -1,14 +1,19 @@
 import tensorflow as tf
 import pandas as pd
+import numpy as np
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer as TFIDFVec
 from sklearn.feature_extraction.text import CountVectorizer as TFVec
 from sklearn.metrics.pairwise import cosine_similarity
 import gensim
 from ast import literal_eval
+import os
 
+debug = 2000
+TrainingPath = "train_data_vanilla.csv"
+EvalPath = "eval_data_vanilla.csv"
+TestPath = "test_data_vanilla.csv"
 
-VERBOSE = True
 
 def get_input_fn(mode=None):
     """Creates an input function that loads the dataset and prepares it for use."""
@@ -43,17 +48,18 @@ def get_input_fn_nli(mode=None):
         """
         with tf.device('/cpu:0'):
             if mode == 'train':
-                ds_gen = load_nli("example_train.")
+                ds_gen = load_nli(os.path.join(params.data_set,TrainingPath))
             elif mode == 'eval' or mode == 'predict':
-                ds_gen = load_nli("example_dev.csv")
+                ds_gen = load_nli(os.path.join(params.data_set,EvalPath))
             else:
                 raise ValueError('_input_fn received invalid MODE')
 
             #TODO: lookup tf.<data.type> and shape for these textdata/ask Ben
             dataset = tf.data.Dataset.from_generator(
                 generator = ds_gen,
-                output_types = (tf.int64, tf.int64),
-                output_shapes = (tf.TensorShape([]), tf.TensorShape([None]))
+                output_types = (tf.float64,tf.int, tf.float64 ,tf.int),
+                # batch_size, 10.001 # batchsize 500
+                output_shapes = ([500, 10001],[500])
             )
 
         return dataset.make_one_shot_iterator().get_next()
@@ -77,21 +83,23 @@ def load_nli(file):
     print("finished fitting")
     # TODO: store it, so can be called during testing
     del documents
+    print("transform data")
     tf_claims = tf_vec.transform(claims)
     tf_evidences = tf_vec.transform(evidences)
     tfidf_claims = tfidf_vec.transform(claims)
     tfidf_evidences = tfidf_vec.transform(evidences)
+    print("transformation done")
     #print("tfidfs:\n claim: {}\n {},\n evidence: {}\n {}".format(tfidf_claims.shape,tfidf_claims,tfidf_evidences.shape,tfidf_evidences))
 
-
-
-
-    for tf_claim, tf_evidence,tfidf_claim, tfidf_evidence,label  in zip(tf_claims,tf_evidences, tfidf_claims, tfidf_evidences,labels):
+    nli_batch_size = 500
+    batch_start = 0
+    for batch_end  in range(500,len(claims),nli_batch_size):
         # see paper: p. 3 A_simple_but_tough_to_beat_baseline
 
-        tfidf_sim = cosine_similarity(tfidf_claim, tfidf_evidence)
+        print(tfidf_claims[batch_start:batch_end, ].shape)
+        tfidf_sims = cosine_similarity(tfidf_claims[batch_start:batch_end,], tfidf_evidences[batch_start:batch_end,])
 
-        yield tf_claim, tfidf_sim[0][0], tf_evidence, label
+        yield np.concatenate((tf_claims[batch_start:batch_end,], np.array(tfidf_sims), tf_evidences[batch_start:batch_end,])), labels[batch_start:batch_end]
 
 
 
@@ -119,7 +127,10 @@ def get_claim_evidence_pairs(file, concat_evidence=True):
     # Dict of functions for converting values in certain columns. Keys can either be integers or column labels.
     print("load claim-evidence pairs from {}".format(file))
     converter = {"evidence" : literal_eval}
-    data_frame = pd.read_csv(file,converters=converter)
+    if debug:
+        data_frame = pd.read_csv(file,converters=converter,nrows=debug)
+    else:
+        data_frame = pd.read_csv(file, converters=converter)
 
 
     concatenate = lambda x: " ".join(x)
@@ -173,8 +184,8 @@ def get_input_fn_fever(mode=None):
 
 if __name__ == "__main__":
     Embedding_Path = None
-    TrainingPath = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data/train_data_vanilla.csv"
-    for i,a in enumerate(load_nli(file=TrainingPath)):
-        if i > 10:
+    local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
+    for i,a in enumerate(load_nli(file=os.path.join(local_test_path,TrainingPath))):
+        if i > 1:
             break
         print(i,a)
