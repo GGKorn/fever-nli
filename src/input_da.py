@@ -62,7 +62,7 @@ def get_input_fn_nli(mode=None):
 
 def load_nli(file):
     """
-    yields the data of next claim in order: claim, evidences, label
+    yields the data of next claim in order: tf_claim, tfidf_sim, tf_evidence, label
     :param file:
     :return:
     """
@@ -70,21 +70,28 @@ def load_nli(file):
 
     claims,evidences,documents,labels = get_claim_evidence_pairs(file)
 
+
+    print("fitting TF and tfidf")
     tf_vec = TFVec(stop_words="english", max_features=5000).fit(documents)
     tfidf_vec = TFIDFVec(stop_words="english", max_features=5000).fit(documents)
+    print("finished fitting")
     # TODO: store it, so can be called during testing
     del documents
     tf_claims = tf_vec.transform(claims)
     tf_evidences = tf_vec.transform(evidences)
     tfidf_claims = tfidf_vec.transform(claims)
     tfidf_evidences = tfidf_vec.transform(evidences)
-    tfidf_sims = cosine_similarity(tfidf_claims,tfidf_evidences)
-    del tfidf_claims, tfidf_evidences
+    #print("tfidfs:\n claim: {}\n {},\n evidence: {}\n {}".format(tfidf_claims.shape,tfidf_claims,tfidf_evidences.shape,tfidf_evidences))
 
 
-    for tf_claim, tf_evidence,tfidf_sim,label  in zip(tf_claims,tf_evidences, tfidf_sims,labels):
+
+
+    for tf_claim, tf_evidence,tfidf_claim, tfidf_evidence,label  in zip(tf_claims,tf_evidences, tfidf_claims, tfidf_evidences,labels):
         # see paper: p. 3 A_simple_but_tough_to_beat_baseline
-        yield tf_claim, tfidf_sim, tf_evidence, label
+
+        tfidf_sim = cosine_similarity(tfidf_claim, tfidf_evidence)
+
+        yield tf_claim, tfidf_sim[0][0], tf_evidence, label
 
 
 
@@ -110,23 +117,23 @@ def get_claim_evidence_pairs(file, concat_evidence=True):
     # converters: dict, optional
     #
     # Dict of functions for converting values in certain columns. Keys can either be integers or column labels.
-
+    print("load claim-evidence pairs from {}".format(file))
     converter = {"evidence" : literal_eval}
     data_frame = pd.read_csv(file,converters=converter)
 
 
-    concatenate = lambda x: " ".format(x)
-    evidene_concat = data_frame["evidence"].apply(concatenate)
-    document_list = evidene_concat + data_frame["claim"]
+    concatenate = lambda x: " ".join(x)
+    evidence_concat = data_frame["evidence"].apply(concatenate)
+    document_list = list(evidence_concat + data_frame["claim"])
     if concat_evidence:
-        evidence_list = evidene_concat
+        evidence_list = list(evidence_concat)
     else:
         evidence_list = list(data_frame["evidence"])
 
     claim_list = list(data_frame["claim"])
     label_list = list(data_frame["label"])
 
-
+    print("loaded {} pairs".format(len(data_frame)))
     return claim_list, evidence_list, document_list, label_list
 
 
@@ -166,5 +173,8 @@ def get_input_fn_fever(mode=None):
 
 if __name__ == "__main__":
     Embedding_Path = None
-    a = load_nli(file="/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data/train_data_vanilla.csv")
-    print(a)
+    TrainingPath = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data/train_data_vanilla.csv"
+    for i,a in enumerate(load_nli(file=TrainingPath)):
+        if i > 10:
+            break
+        print(i,a)
