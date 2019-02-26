@@ -1,0 +1,5 @@
+id,verifiable,label,claim,evidence
+1,"VERIFIABLE”,"SUPPORTS",“the picture is nice”,'[“the house is red”, “the sun shines”]'
+2,"VERIFIABLE”,"REFUTES","Adrienne Bailon is an accountant.",'[“she wears a tie”, “she wears a dress”]'
+3,"VERIFIABLE”,"REFUTES",'"Stranger Things is set in Bloomington, Indiana."',[“there are many bushes”]
+4,"VERIFIABLE”,"SUPPORTS","Homeland is an American television spy thriller based on the Israeli television series Prisoners of War.",'[“there is a lot of shooting”, “the americans are the good guys”]'

@@ -84,6 +84,7 @@ class DecomposibleAttentionModel(object):
         Returns:
             tuple of embedding-vectors containing the information from evidence and claims
         """
+        #TODO: put loading embedding and lookup here
         with tf.device('/cpu:0'):
             return evidence, claims
 
