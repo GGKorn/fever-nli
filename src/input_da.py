@@ -5,6 +5,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer as TFIDFVec
 from sklearn.feature_extraction.text import CountVectorizer as TFVec
 from sklearn.metrics.pairwise import cosine_similarity
 import gensim
+from ast import literal_eval
+
 
 VERBOSE = True
 
@@ -108,18 +110,22 @@ def get_claim_evidence_pairs(file, concat_evidence=True):
     # converters: dict, optional
     #
     # Dict of functions for converting values in certain columns. Keys can either be integers or column labels.
-    if concat_evidence:
-        concatenate = lambda x: x
-        converters = {"evidence" : concatenate}
-    data_frame = pd.read_csv(file)
-    print("\nclaims\n", data_frame["claim"], "\n\nevidences\n", data_frame["evidence"])
 
-    data_frame.
+    converter = {"evidence" : literal_eval}
+    data_frame = pd.read_csv(file,converters=converter)
+
+
+    concatenate = lambda x: " ".format(x)
+    evidene_concat = data_frame["evidence"].apply(concatenate)
+    document_list = evidene_concat + data_frame["claim"]
+    if concat_evidence:
+        evidence_list = evidene_concat
+    else:
+        evidence_list = list(data_frame["evidence"])
+
     claim_list = list(data_frame["claim"])
     label_list = list(data_frame["label"])
 
-    evidence_list, document_list = [], []
-    document_list = data_frame["evidence"] + data_frame["claim"]
 
     return claim_list, evidence_list, document_list, label_list
 
@@ -160,5 +166,5 @@ def get_input_fn_fever(mode=None):
 
 if __name__ == "__main__":
     Embedding_Path = None
-    a = load_nli(file="/workData/Uni/NLP/project/fever-nli/data/example_train.csv")
+    a = load_nli(file="/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data/train_data_vanilla.csv")
     print(a)
