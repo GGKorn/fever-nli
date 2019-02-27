@@ -47,7 +47,7 @@ class SimpleBaselineModel(object):
                                         activation=None,
                                         name='logits')
                 # 2nd dropout, god knows why...
-                model = tf.layers.dropout(model, (1 - self.dropout_keep_prob), training=isTraining)
+                # model = tf.layers.dropout(model, (1 - self.dropout_keep_prob), training=isTraining)
                 self.logits = tf.reshape(model, [self.hparams.batch_size, self.logit_dims])
 
             # objective ops
