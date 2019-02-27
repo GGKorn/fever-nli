@@ -39,7 +39,7 @@ def get_dataset_generator(file=None, batch_size=500):
         :param file:
         :return:
         """
-        claims, evidences, documents, labels, max_ev_len = get_fever_claim_evidence_pairs(file)
+        claims, evidences, documents, labels, max_ev_len, max_cl_len = get_fever_claim_evidence_pairs(file)
 
         # print("fitting TF and tfidf")
         # tf_vec = TFVec(stop_words="english", max_features=5000).fit(documents)
@@ -83,6 +83,7 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     evidence_concat = data_frame["evidence"].apply(concatenate)
     # TODO: check if specifing col is required
     max_ev_len = evidence_concat.map(lambda x: len(x)).max()
+    max_cl_len = data_frame["claim"].map(lambda x: len(x)).max()
     document_list = list(evidence_concat + data_frame["claim"])
     if concat_evidence:
         evidence_list = list(evidence_concat)
@@ -92,10 +93,10 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
 
     claim_list = list(data_frame["claim"])
     label_list = list(data_frame["label"])
-
+    verif_list = list(data_frame["verifiable"])
 
     # print("loaded {} pairs".format(len(data_frame)))
-    return claim_list, evidence_list, document_list, label_list, max_ev_len
+    return claim_list, evidence_list, document_list, label_list, verif_list, max_ev_len, max_cl_len
 
 
 
