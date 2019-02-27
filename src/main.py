@@ -1,10 +1,11 @@
 import argparse
 import os, sys
 import tensorflow as tf
-import inspect
+import datetime
 
 # pylint: disable=undefined-variable, import-error
-from input import get_input_fn
+# from input_tmp import get_input_fn
+from input_fnc import get_input_fn
 from model_fnc import SimpleBaselineModel
 from model_da import DecomposibleAttentionModel
 
@@ -51,6 +52,7 @@ def main(**hparams):
     tf.logging.set_verbosity(tf.logging.INFO)
 
     # log command line arguments for posterity
+    tf.logging.info('Starting execution at {}'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
     tf.logging.info('Using arguments: {}\n'.format(str(hparams)))
 
     # Prepare ConfigProto object with several device settings
@@ -92,6 +94,7 @@ def main(**hparams):
         )
 
         tf.logging.info('Finished iteration {} of {}.\n'.format((i+1), hparams['repeats']))
+    tf.logging.info('Finishing execution at {}'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -127,12 +130,6 @@ if __name__ == '__main__':
         help='Number of scheduled repeats this job should run for.',
         dest='repeats')
     parser.add_argument(
-        '-d', '--logit-dimensions',
-        type=int,
-        required=True,
-        help='Dimension of network logits',
-        dest='logit_dims')
-    parser.add_argument(
         '-n', '--num-gpus',
         type=int,
         default=1,
@@ -141,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-c', '--num-cpu-cores',
         type=int,
-        default=1,
+        default=4,
         help='The number of cpu cores available for data preparation.',
         dest='num_cores')
     parser.add_argument(
