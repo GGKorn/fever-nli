@@ -11,7 +11,7 @@ import os
 import scipy
 
 
-debug = 20000
+debug = 2000
 TrainingPath = "train_data_vanilla.csv"
 EvalPath = "eval_data_vanilla.csv"
 TestPath = "test_data_vanilla.csv"
@@ -59,7 +59,7 @@ def get_input_fn_nli(mode=None):
             #TODO: lookup tf.<data.type> and shape for these textdata/ask Ben
             dataset = tf.data.Dataset.from_generator(
                 generator = ds_gen,
-                output_types = (tf.float64 ,tf.int32),
+                output_types = (tf.float32 ,tf.int64),
                 # batch_size, 10.001 # batchsize 500
                 output_shapes = ([500, 10001],[500])
             )
