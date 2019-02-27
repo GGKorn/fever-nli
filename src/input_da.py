@@ -39,7 +39,7 @@ def get_dataset_generator(file=None, batch_size=500):
         :param file:
         :return:
         """
-        claims, evidences, documents, labels, max_ev_len, max_cl_len = get_fever_claim_evidence_pairs(file)
+        claims, evidences, documents, labels, verify_labels,  max_ev_len, max_cl_len = get_fever_claim_evidence_pairs(file)
 
         # print("fitting TF and tfidf")
         # tf_vec = TFVec(stop_words="english", max_features=5000).fit(documents)
@@ -55,15 +55,11 @@ def get_dataset_generator(file=None, batch_size=500):
         # # print("transformation done")
         # # print("tfidfs:\n claim: {}\n {},\n evidence: {}\n {}".format(tfidf_claims.shape,tfidf_claims,tfidf_evidences.shape,tfidf_evidences))
         #
-        # batch_start = 0
-        # for batch_end in range(500, len(claims), batch_size):
-        #     tfidf_sims = np.diag(cosine_similarity(tfidf_claims[batch_start:batch_end, ],
-        #                                            tfidf_evidences[batch_start:batch_end, ])).reshape(-1, 1)
-        #
-        #     yield scipy.sparse.hstack(
-        #         (tf_claims[batch_start:batch_end, ], tfidf_sims, tf_evidences[batch_start:batch_end, ])).A, labels[
-        #                                                                                                     batch_start:batch_end]
-        #     batch_start = batch_end
+        batch_start = 0
+        for batch_end in range(500, len(claims), batch_size):
+
+            yield (claims[batch_start:batch_end], evidences[batch_start:batch_end], max_ev_len, max_cl_len), (labels[batch_start:batch_end], verify_labels[batch_start:batch_end])
+            batch_start = batch_end
 
     return _load_fever
 
