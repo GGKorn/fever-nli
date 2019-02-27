@@ -6,10 +6,24 @@ import scipy
 from glob import iglob
 import pandas as pd
 
+
+
 debug = False
 TrainingPath = "train_data_*.csv"
 EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
+
+
+from gensim.models.keyedvectors import KeyedVectors
+W2V_PATH = "/workData/generalUseData/GoogleNews-vectors-negative300.bin.gz"
+W2V_IS_BINARY = True
+emb_size = 300
+
+
+
+# from https://stackoverflow.com/questions/48057991/get-word-embedding-dictionary-with-glove-python-model
+# model.word_vectors[model.dictionary['samsung']]
+
 
 
 def get_input_fn(mode=None):
@@ -20,46 +34,74 @@ def get_input_fn(mode=None):
         Returns:
             An (one-shot) iterator containing (data, label) tuples
         """
+
+        # keep
+        # do processing here
+        #   1. load WE
+        #   2. load data
+        #   3. get indexes of data from WE
+        #   4. save index representaion locally
+        #   5. pass file name to load_fever
+        #   6. load the already indexed data in load_fever
+
+        vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=W2V_IS_BINARY)
+
+
+
         with tf.device('/cpu:0'):
             if mode == 'train':
-                dataset = None
-            elif mode == 'eval' or mode == 'predict':
-                dataset = None
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TrainingPath), vectors, params.batch_size)
+
+                dataset = tf.data.Dataset.from_generator(
+                    generator = ds_gen,
+                    output_types = (tf.float32,tf.float32, tf.int64,tf.int64,tf.int64,tf.int64)
+                )
+                dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=10, count=None))
+                dataset = dataset.prefetch(buffer_size=1)
+            elif mode == 'eval':
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, EvalPath), vectors, params.eval_batch_size)
+                dataset = tf.data.Dataset.from_generator(
+                    generator = ds_gen,
+                    output_types = (tf.float32,tf.float32, tf.int64,tf.int64,tf.int64,tf.int64)
+                )
+                dataset = dataset.shuffle(buffer_size=1)
+                dataset = dataset.prefetch(buffer_size=1)
+            elif mode == 'predict':
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TestPath), vectors, params.eval_batch_size)
+                dataset = tf.data.Dataset.from_generator(
+                    generator = ds_gen,
+                    output_types = (tf.float32,tf.float32, tf.int64,tf.int64,tf.int64,tf.int64)
+                )
+                dataset = dataset.shuffle(buffer_size=1)
+                dataset = dataset.prefetch(buffer_size=1)
             else:
                 raise ValueError('_input_fn received invalid MODE')
-        return dataset
+        return dataset.make_one_shot_iterator().get_next()
 
     return _input_fn
 
 
-def get_dataset_generator(file=None, batch_size=500):
+def get_dataset_generator(file, emb_vectors, batch_size=500):
+
+
+
     def _load_fever():
         """
         yields the data of next claim in order: tf_claim, tfidf_sim, tf_evidence, label
         :param file:
         :return:
         """
-        claims, evidences, documents, labels, verify_labels,  max_ev_len, max_cl_len = get_fever_claim_evidence_pairs(file)
 
-        # print("fitting TF and tfidf")
-        # tf_vec = TFVec(stop_words="english", max_features=5000).fit(documents)
-        # tfidf_vec = TFIDFVec(stop_words="english", max_features=5000).fit(documents)
-        # # print("finished fitting")
-        # # TODO: store it, so can be called during testing
-        # del documents
-        # print("transform data")
-        # tf_claims = tf_vec.transform(claims)
-        # tf_evidences = tf_vec.transform(evidences)
-        # tfidf_claims = tfidf_vec.transform(claims)
-        # tfidf_evidences = tfidf_vec.transform(evidences)
-        # # print("transformation done")
-        # # print("tfidfs:\n claim: {}\n {},\n evidence: {}\n {}".format(tfidf_claims.shape,tfidf_claims,tfidf_evidences.shape,tfidf_evidences))
-        #
-        batch_start = 0
-        for batch_end in range(500, len(claims), batch_size):
+        claims, evidences, labels, verify_labels, ev_len, max_ev_len, cl_len, max_cl_len = get_fever_claim_evidence_pairs(file)
+        # to extract word vector
+        print("max_ev_len {}, max_cl_len {}".format(max_ev_len,  max_cl_len))
+        lookup_em = lambda x: [emb_vectors[token] for token in x.split()]
 
-            yield (claims[batch_start:batch_end], evidences[batch_start:batch_end], max_ev_len, max_cl_len), (labels[batch_start:batch_end], verify_labels[batch_start:batch_end])
-            batch_start = batch_end
+        for i in range(len(claims)):
+            emb_claims = lookup_em(claims[i])
+            emb_eviden = lookup_em(evidences[i])
+
+            yield emb_claims, emb_eviden, ev_len[i], cl_len[i], labels[i], verify_labels[i]
 
     return _load_fever
 
@@ -78,9 +120,10 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     concatenate = lambda x: " ".join(x)
     evidence_concat = data_frame["evidence"].apply(concatenate)
     # TODO: check if specifing col is required
+    ev_len = evidence_concat.map(lambda x: len(x))
     max_ev_len = evidence_concat.map(lambda x: len(x)).max()
+    cl_len = data_frame["claim"].map(lambda x: len(x))
     max_cl_len = data_frame["claim"].map(lambda x: len(x)).max()
-    document_list = list(evidence_concat + data_frame["claim"])
     if concat_evidence:
         evidence_list = list(evidence_concat)
     else:
@@ -92,7 +135,7 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     verif_list = list(data_frame["verifiable"])
 
     # print("loaded {} pairs".format(len(data_frame)))
-    return claim_list, evidence_list, document_list, label_list, verif_list, max_ev_len, max_cl_len
+    return claim_list, evidence_list, label_list, verif_list, ev_len, max_ev_len, cl_len, max_cl_len
 
 
 
@@ -100,8 +143,9 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
 if __name__ == "__main__":
     Embedding_Path = None
     local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
+    vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=W2V_IS_BINARY)
     # local_test_path = r"E:\Python\ANLP Final Project\data\vanilla_wiki_data"
-    ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath))
+    ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath),vectors)
     # print(ds_gen())
     i = 0
     for a,b in ds_gen():
