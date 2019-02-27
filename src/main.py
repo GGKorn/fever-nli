@@ -72,10 +72,10 @@ def main(**hparams):
             model_dir=os.path.abspath(os.path.join(hparams['output_dir'], '{}-{}'.format(str(hparams['job_id']), str(i+1)))),
             tf_random_seed=None,
             save_summary_steps=100, # write 'debug' summaries every 100 steps
-            save_checkpoints_steps=1000, # save weights & parameters every 1000 steps
+            save_checkpoints_steps=500, # save weights & parameters every 500 steps
             save_checkpoints_secs=None,
             session_config=session_config,
-            keep_checkpoint_max=int(hparams['train_steps']/1000)+1, # keep exactly as much checkpoints as will be generated
+            keep_checkpoint_max=int(hparams['train_steps']/500)+1, # keep exactly as many checkpoints as will be generated
             keep_checkpoint_every_n_hours=10000, # never remove checkpoints because of age
             log_step_count_steps=100
         )
