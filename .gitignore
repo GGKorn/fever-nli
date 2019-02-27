@@ -113,7 +113,3 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-
-# wiki data
-/data/wiki-pages/
-/data/vanilla_wiki_data/unsorted_vanilla_batched_wiki_data/

@@ -11,6 +11,7 @@ class SimpleBaselineModel(object):
         self.clip_gradients = True
         self.clip_norm = 5
         self.dropout_keep_prob = 0.6
+        self.logit_dims = 3
 
         with tf.name_scope('inputs'):
             self.inputs = features
@@ -27,6 +28,7 @@ class SimpleBaselineModel(object):
         Parameters:
             mode:   tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes purpose of current run
         """
+        isTraining = (mode == tf.estimator.ModeKeys.TRAIN)
         with tf.variable_scope('model'):
             with tf.variable_scope('hidden_layer'):
                 # hidden layer
@@ -36,17 +38,17 @@ class SimpleBaselineModel(object):
                                         kernel_initializer=tf.keras.initializers.he_uniform(),
                                         name='dense01')
                 # 1st dropout
-                model = tf.nn.dropout(model, self.dropout_keep_prob)
+                model = tf.layers.dropout(model, (1 - self.dropout_keep_prob), training=isTraining)
             
             with tf.variable_scope('output_layer'):
                 # output layer
                 model = tf.layers.dense(model,
-                                        self.hparams.logit_dims,
+                                        self.logit_dims,
                                         activation=None,
                                         name='logits')
                 # 2nd dropout, god knows why...
-                model = tf.nn.dropout(model, self.dropout_keep_prob)
-                self.logits = tf.reshape(model, [self.hparams.batch_size, self.hparams.logit_dims])
+                model = tf.layers.dropout(model, (1 - self.dropout_keep_prob), training=isTraining)
+                self.logits = tf.reshape(model, [self.hparams.batch_size, self.logit_dims])
 
             # objective ops
             with tf.variable_scope('objective'):
