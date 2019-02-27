@@ -9,12 +9,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 from ast import literal_eval
 import os
 import scipy
+from glob import iglob
 
 
 debug = False
-TrainingPath = "train_data_vanilla.csv"
-EvalPath = "eval_data_vanilla.csv"
-TestPath = "test_data_vanilla.csv"
+TrainingPath = "train_data_*.csv"
+EvalPath = "eval_data_*.csv"
+TestPath = "test_data_*.csv"
 
 def get_input_fn(mode=None):
     """Creates an input function that loads the dataset and prepares it for use."""
@@ -26,16 +27,16 @@ def get_input_fn(mode=None):
         """
         with tf.device('/cpu:0'):
             if mode == 'train':
-                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TrainingPath))
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TrainingPath), params.batch_size)
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
                     output_types = (tf.float32, tf.int64),
                     output_shapes = ([params.batch_size, 10001],[params.batch_size])
                 )
-                dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=75, count=None))
+                dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=10, count=None))
                 dataset = dataset.prefetch(buffer_size=1)
             elif mode == 'eval':
-                ds_gen = get_dataset_generator(os.path.join(params.data_dir, EvalPath))
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, EvalPath), params.eval_batch_size)
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
                     output_types = (tf.float32, tf.int64),
@@ -44,7 +45,7 @@ def get_input_fn(mode=None):
                 dataset = dataset.shuffle(buffer_size=1)
                 dataset = dataset.prefetch(buffer_size=1)
             elif mode == 'predict':
-                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TestPath))
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TestPath), params.eval_batch_size)
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
                     output_types = (tf.float32, tf.int64),
@@ -59,7 +60,7 @@ def get_input_fn(mode=None):
     return _input_fn
 
 
-def get_dataset_generator(file=None):
+def get_dataset_generator(file=None, batch_size=500):
 
     def _load_nli():
         """
@@ -83,9 +84,8 @@ def get_dataset_generator(file=None):
         # print("transformation done")
         #print("tfidfs:\n claim: {}\n {},\n evidence: {}\n {}".format(tfidf_claims.shape,tfidf_claims,tfidf_evidences.shape,tfidf_evidences))
 
-        nli_batch_size = 500
         batch_start = 0
-        for batch_end in range(500,len(claims),nli_batch_size):
+        for batch_end in range(500, len(claims), batch_size):
             # see paper: p. 3 A_simple_but_tough_to_beat_baseline
 
 
@@ -120,18 +120,15 @@ def load_fever(file,wordemb_path,concat_evidence=True):
         yield we_claim , we_evidence, label, longest_evidence
 
 
-def get_claim_evidence_pairs(file, concat_evidence=True):
+def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
 
     # converters: dict, optional
     #
     # Dict of functions for converting values in certain columns. Keys can either be integers or column labels.
     # print("load claim-evidence pairs from {}".format(file))
     converter = {"evidence" : literal_eval}
-    if debug:
-        data_frame = pd.read_csv(file,converters=converter,nrows=debug)
-    else:
-        data_frame = pd.read_csv(file, converters=converter)
-
+    file_list = iglob(file_pattern)
+    data_frame = pd.concat(pd.read_csv(f, converters=converter) for f in file_list)
 
     concatenate = lambda x: " ".join(x)
     evidence_concat = data_frame["evidence"].apply(concatenate)
