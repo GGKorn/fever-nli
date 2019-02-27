@@ -86,38 +86,15 @@ def get_dataset_generator(file=None, batch_size=500):
 
         batch_start = 0
         for batch_end in range(500, len(claims), batch_size):
-            # see paper: p. 3 A_simple_but_tough_to_beat_baseline
 
-
-            # TODO: find how to get diagonal out of  n_samples_X, n_samples_Y matrix
-            #  cosine_similarity returns An array with shape (n_samples_X, n_samples_Y).
             tfidf_sims = np.diag(cosine_similarity(tfidf_claims[batch_start:batch_end,], tfidf_evidences[batch_start:batch_end,])).reshape(-1,1)
-            # tfidf_sims = np.array([cosine_similarity(x, y) for x, y in zip(tfidf_claims[batch_start:batch_end,], tfidf_evidences[batch_start:batch_end,])]).reshape(-1, 1)
 
-            # TODO: check if concatenation works
-            #print(tf_claims[batch_start:batch_end,].shape,tfidf_sims.shape,tf_evidences[batch_start:batch_end,].shape)
+
 
             yield scipy.sparse.hstack((tf_claims[batch_start:batch_end,], tfidf_sims, tf_evidences[batch_start:batch_end,])).A , labels[batch_start:batch_end]
             batch_start = batch_end
 
     return _load_nli
-
-
-def load_fever(file,wordemb_path,concat_evidence=True):
-    print("Loading pre-trained embedding", wordemb_path)
-
-    with open(file, "r") as read_file:
-        data = json.load(read_file)
-    claims, evidences, documents, labels = get_claim_evidence_pairs(data,concat_evidence)
-
-    # deprecated: gensim.models.Word2Vec.load_word2vec_format(wordemb_path, binary=True)
-    vectors = gensim.models.Word2Vec.load_word2vec_format(wordemb_path, binary=True)
-
-    we_claims, we_evidences = [],[]
-    longest_evidence = None
-    for we_claim, we_evidence, label  in zip(we_claims,we_evidences, labels):
-        # see paper: p. 3 A_simple_but_tough_to_beat_baseline
-        yield we_claim , we_evidence, label, longest_evidence
 
 
 def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
@@ -145,34 +122,6 @@ def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
     return claim_list, evidence_list, document_list, label_list
 
 
-#TODO: how to integrate word embedding transform
-def get_input_fn_fever(mode=None):
-    """Creates an input function that loads the dataset and prepares it for use."""
-
-    def _input_fn(mode=None, params=None):
-        """
-        Returns:
-            An (one-shot) iterator containing (data, label) tuples
-        """
-        with tf.device('/cpu:0'):
-            if mode == 'train':
-                ds_gen = load_fever("example_train.csv",Embedding_Path)
-            elif mode == 'eval' or mode == 'predict':
-                ds_gen = load_fever("example_dev.csv",Embedding_Path)
-            else:
-                raise ValueError('_input_fn received invalid MODE')
-
-            #TODO: lookup tf.<data.type> and shape for these textdata/ask Ben
-            dataset = tf.data.Dataset.from_generator(
-                generator = ds_gen,
-                output_types = (tf.int64, tf.int64),
-                output_shapes = (tf.TensorShape([]), tf.TensorShape([None]))
-            )
-
-        return dataset.make_one_shot_iterator().get_next()
-
-    return _input_fn
-    
 
 if __name__ == "__main__":
     Embedding_Path = None
