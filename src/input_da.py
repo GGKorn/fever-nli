@@ -92,12 +92,11 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
         :return:
         """
 
-        claims, evidences, labels, verify_labels, ev_len, max_ev_len, cl_len, max_cl_len = get_fever_claim_evidence_pairs(file)
+        claims, evidences, labels, verify_labels, ev_len, cl_len = get_fever_claim_evidence_pairs(file)
         # to extract word vector
-        print("max_ev_len {}, max_cl_len {}".format(max_ev_len,  max_cl_len))
         #lookup_em = lambda x: [emb_vectors[token] for token in x.split() if token in emb_vectors]
 
-        def lookup_em(x,emb_vectors):
+        def lookup_em(x):
 
             embedding_list = []
             for token in x.split():
@@ -107,10 +106,20 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
                     embedding_list.append(np.random.uniform(size=(emb_size)))
             return embedding_list
 
+        claim_max_len = claims.map(lookup_em).max()
+        evid_max_len = evidences.map(lookup_em).max()
+        def print_longest(sents, max):
+
+            for sent in sents:
+                if len(lookup_em(sent)) == evid_max_len:
+                    print(sent)
+
+        print("max_ev: {} max_cl: {}".format([claim_max_len,evid_max_len]))
+        print_longest(evidences,evid_max_len)
 
         for i in range(len(claims)):
-            emb_claims = lookup_em(claims[i],emb_vectors)
-            emb_eviden = lookup_em(evidences[i],emb_vectors)
+            emb_claims = lookup_em(claims[i])
+            emb_eviden = lookup_em(evidences[i])
 
             yield emb_claims, emb_eviden, ev_len[i], cl_len[i], labels[i], verify_labels[i]
 
@@ -132,9 +141,9 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     evidence_concat = data_frame["evidence"].apply(concatenate)
     # TODO: check if specifing col is required
     ev_len = evidence_concat.map(lambda x: len(x))
-    max_ev_len = evidence_concat.map(lambda x: len(x.split())).max()
+    #max_ev_len = evidence_concat.map(lambda x: len(x.split())).max()
     cl_len = data_frame["claim"].map(lambda x: len(x))
-    max_cl_len = data_frame["claim"].map(lambda x: len(x.split())).max()
+    #max_cl_len = data_frame["claim"].map(lambda x: len(x.split())).max()
     if concat_evidence:
         evidence_list = list(evidence_concat)
     else:
@@ -146,7 +155,7 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     verif_list = list(data_frame["verifiable"])
 
     # print("loaded {} pairs".format(len(data_frame)))
-    return claim_list, evidence_list, label_list, verif_list, ev_len, max_ev_len, cl_len, max_cl_len
+    return claim_list, evidence_list, label_list, verif_list, ev_len, cl_len
 
 
 
