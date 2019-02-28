@@ -8,7 +8,7 @@ import pandas as pd
 import unicodedata
 
 
-debug = False
+debug = 5000
 TrainingPath = "train_data_*.csv"
 EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
@@ -17,8 +17,8 @@ TestPath = "test_data_*.csv"
 from gensim.models.keyedvectors import KeyedVectors
 W2V_PATH = "/workData/generalUseData/GoogleNews-vectors-negative300.bin.gz"
 W2V_IS_BINARY = True
+emb_size_threshold = 500
 emb_size = 300
-
 
 
 # from https://stackoverflow.com/questions/48057991/get-word-embedding-dictionary-with-glove-python-model
@@ -104,7 +104,8 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
                 if token in emb_vectors:
                     embedding_list.append(emb_vectors[token])
                 else:
-                    embedding_list.append(np.random.uniform(size=(emb_size)))
+                    rand_embed = np.random.uniform(size=(emb_size if emb_size <= emb_size_threshold else emb_size_threshold))
+                    embedding_list.append(rand_embed)
             return embedding_list
 
         # evid_max_len = map(lookup_em,evidences)
@@ -133,20 +134,31 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
 
             emb_claims, emb_evidence = [],[]
             emb_claim_lens, emb_evidence_lens = [],[]
-            for i in range(batch_start,batch_end,1):
-                single_claim = lookup_em(claims[i])
-                emb_claims.append(single_claim)
-                emb_claim_lens.append(len(single_claim))
+            for batch_intern_index,i in enumerate(range(batch_start,batch_end,1)):
 
-                single_evidence = lookup_em(evidences[i])
-                emb_evidence.append(single_evidence)
-                emb_evidence_lens.append(len(single_evidence))
+                # get embdding for sentence
+                single_claim_emb = lookup_em(claims[i])
+                single_evidence_emb = lookup_em(evidences[i])
 
-                emb_evidence[i] = np.pad(emb_evidence[i], (1, (evid_max_len - emb_evidence_lens)), mode='constant')
-                emb_claims[i] = np.pad(emb_claims[i], (1, (claim_max_len - emb_claim_lens)), mode='constant')
+                # fill length vector for output
+                emb_claim_lens.append(len(single_claim_emb))
+                emb_evidence_lens.append(len(single_evidence_emb))
 
-            # TODO: (500,) form
-            yield emb_claims[batch_start:batch_end], emb_evidence[batch_start:batch_end], emb_evidence_lens, emb_claim_lens, labels[batch_start:batch_end], verify_labels[batch_start:batch_end]
+                # fill batches with embedded sentence
+                emb_claims.append(single_claim_emb)
+                emb_evidence.append(single_evidence_emb)
+
+                # add zero-pad in front, also helps with empty evidences
+                # zero-pad up to max_sent_length
+                a = emb_evidence[batch_intern_index]
+                b = evid_max_len
+                c = emb_evidence_lens[batch_intern_index]
+
+                emb_evidence[batch_intern_index] = np.pad(a, (1, (b - c)), mode='constant')
+                emb_claims[batch_intern_index] = np.pad(emb_claims[batch_intern_index], (1, (claim_max_len - emb_claim_lens[batch_intern_index])), mode='constant')
+
+            emb_evidence_lens, emb_claim_lens = np.array(emb_evidence_lens).reshape((batch_size,)), np.array(emb_claim_lens).reshape((batch_size,))
+            yield emb_claims, emb_evidence, emb_evidence_lens, emb_claim_lens, labels[batch_start:batch_end], verify_labels[batch_start:batch_end]
             batch_start = batch_end
 
     return _load_fever
@@ -189,14 +201,18 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
 if __name__ == "__main__":
     Embedding_Path = None
     local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
-    vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=W2V_IS_BINARY)
+    if debug:
+        vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=W2V_IS_BINARY,limit=debug)
+    else:
+        vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=W2V_IS_BINARY)
     # local_test_path = r"E:\Python\ANLP Final Project\data\vanilla_wiki_data"
     ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath),vectors)
     # print(ds_gen())
     i = 0
     for a,b,c,d,e,f in ds_gen():
-        print(np.shape(a), np.shape(b),e,f)
+        print(a[:2], b[:2],c.shape,d.shape)
         i += 1
+        print(i)
         if i > 10:
             break
     print("iterations: ", i)
