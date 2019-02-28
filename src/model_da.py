@@ -11,11 +11,14 @@ class DecomposibleAttentionModel(object):
             mode:       tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes purpose of current run
             hparams:    command line arguments specifying hyperparameters
         """
-        self.hparams = hparams
-        self.evidence = features[0]
-        self.claims = features[1]
-        self.labels = labels
-        self.global_step = tf.Variable(0, trainable=False, name='global_step')
+        self.hparams        = hparams
+        self.evidence       = features[1]   # [?, sentence_length, embedding_size], pre-embedded
+        self.evidence_len   = features[2]   # [?, 1], token length of evidence lists
+        self.claims         = features[0]   # [?, sentence_length, embedding_size], pre-embedded
+        self.claims_len     = features[3]   # [?, 1], token length of claim lists
+        self.labels         = labels[0]     # [?, 1], sparse labels
+        self.verifiable     = labels[1]     # [?, 1], whether or not ev-cl pair is verifiable (has enough info)
+        self.global_step    = tf.Variable(0, trainable=False, name='global_step')
 
         # fixed hyperparameters that will not be available via commandline
         self.len_sentence = None
@@ -37,9 +40,8 @@ class DecomposibleAttentionModel(object):
             mode:   tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes purpose of current run
         """
         with tf.variable_scope('model'):
-            e_evidence, e_claims = self._embedding_lookup(self.evidence, self.claims)
-            alpha, beta = self._attend(e_evidence, e_claims)
-            v_1i, v_2j = self._compare(e_evidence, e_claims, alpha, beta)
+            alpha, beta = self._attend()
+            v_1i, v_2j = self._compare(alpha, beta)
             self.logits = self._aggregate(v_1i, v_2j)
 
             with tf.variable_scope('objective'):
@@ -73,22 +75,7 @@ class DecomposibleAttentionModel(object):
                     gradients, _ = tf.clip_by_global_norm(gradients, self.clip_norm)
                 self.train_op = optimizer.apply_gradients(zip(gradients, variables), global_step=tf.train.get_global_step())
 
-    def _embedding_lookup(self, evidence, claims):
-        """
-        Lookup embeddings from pre-trained word embedding matrix.
-        
-        Parameters:
-            evidence:
-            claims:
-
-        Returns:
-            tuple of embedding-vectors containing the information from evidence and claims
-        """
-        #TODO: put loading embedding and lookup here
-        with tf.device('/cpu:0'):
-            return evidence, claims
-
-    def _attend(self, e_evidence, e_claims):
+    def _attend(self):
         """
         Paragraph 3.1 "Attend" from the paper.
 
@@ -100,22 +87,31 @@ class DecomposibleAttentionModel(object):
             alpha and beta, soft-aligned vectors
         """
         with tf.variable_scope('attend'):
-            f_a = self._dense_layer(e_evidence, self.hidden_units, 'attend_layers', reuse=False)
-            f_b = self._dense_layer(e_claims, self.hidden_units, 'attend_layers', reuse=True)
+            f_a = self._dense_layer(self.evidence,  self.hidden_units, 'attend_layers', reuse=False)
+            f_b = self._dense_layer(self.claims,    self.hidden_units, 'attend_layers', reuse=True)
 
             # content of unnormalised attention weights e[i][j] denotes relation between i-th token of the evidence and 
             # j-th token of the claim
             unnorm_attn_weights = tf.matmul(f_a, f_b, transpose_b=True, name='unnorm_attn_weights')
-            soft_attention_a = tf.nn.softmax(unnorm_attn_weights, name='soft_attention_a')
-            soft_attention_b = tf.nn.softmax(tf.transpose(unnorm_attn_weights, [0, 2, 1]), name='soft_attention_b')
+
+            # produce masks of shape [1, 1, 1, 1, 0, 0, 0] to signify which values are padded (0) and which are real (1)
+            # calculate logarithm of that mask to produce [0, 0, 0, 0, -inf, -inf, -inf]
+            # adding -inf to the padded 0's will cancel them out in the softmax calculation
+            # because e^(-inf [very small negative]) is basically 0
+            masked_a = tf.add(tf.expand_dims(tf.sequence_mask(self.evidence_len), -1), unnorm_attn_weights)
+            masked_b = tf.add(tf.expand_dims(tf.sequence_mask(self.claims_len), -1), tf.transpose(unnorm_attn_weights, [0, 2, 1]))
+
+            # compute softmax on true values (sans padding)
+            soft_attention_a = tf.nn.softmax(masked_a, name='soft_attention_a')
+            soft_attention_b = tf.nn.softmax(masked_b, name='soft_attention_b')
 
             # finalised soft-alignment: tokens in evidence soft-aligned to tokens in claims, and vice-versa
-            alpha = tf.matmul(soft_attention_b, e_evidence, name='alpha') # subphrase in a_bar that is softly aligned to b_bar
-            beta = tf.matmul(soft_attention_a, e_claims, name='beta')     # subphrase in b_bar that is softly aligned to a_bar
+            alpha = tf.matmul(soft_attention_b, self.evidence, name='alpha') # subphrase in a_bar that is softly aligned to b_bar
+            beta = tf.matmul(soft_attention_a, self.claims, name='beta')     # subphrase in b_bar that is softly aligned to a_bar
 
             return alpha, beta
 
-    def _compare(self, e_evidence, e_claims, alpha, beta):
+    def _compare(self, alpha, beta):
         """
         Paragraph 3.2 "Compare" from the paper.
         
@@ -130,8 +126,8 @@ class DecomposibleAttentionModel(object):
         """
         with tf.variable_scope('compare'):
             # concatenate embedding vector and corresponding alignment-vector
-            a_bar_beta = tf.concat([e_evidence, beta], axis=2, name='a_beta_concat')
-            b_bar_alpha = tf.concat([e_claims, alpha], axis=2, name='b_alpha_concat')
+            a_bar_beta = tf.concat([self.evidence, beta], axis=2, name='a_beta_concat')
+            b_bar_alpha = tf.concat([self.claims, alpha], axis=2, name='b_alpha_concat')
 
             # compute comparison
             v_1i = self._dense_layer(a_bar_beta, self.hidden_units, 'compare_layer', reuse=False)
