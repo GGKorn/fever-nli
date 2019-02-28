@@ -203,7 +203,7 @@ if __name__ == "__main__":
     else:
         vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=W2V_IS_BINARY)
     # local_test_path = r"E:\Python\ANLP Final Project\data\vanilla_wiki_data"
-    ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath),vectors)
+    ds_gen = get_dataset_generator(os.path.join(local_test_path,TestPath),vectors)
     # print(ds_gen())
     i = 0
     for a,b,c,d,e,f in ds_gen():
