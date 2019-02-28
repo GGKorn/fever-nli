@@ -47,12 +47,28 @@ def main():
                 j = json.loads(itm)
                 id = str(j['id'])
                 evidence_dict[id] = {}
-                #dictionaries separating data into their categories (supports, refutes, nei)
-                supports_dict = {}
-                refutes_dict = {}
-                nei_dict = {}
-                #initialize each id's evidence as an empty list
+
+                # change 'verifiable' and 'label' into integers for easier manipulation
+                if j['verifiable'] == 'VERIFIABLE':
+                    verifiable = 1
+                else:
+                    verifiable = 0
+                if j['label'] == 'SUPPORTS':
+                    label = 1
+                elif j['label'] == 'REFUTES':
+                    label = 2
+                else:
+                    label = 0
+
+                # build evidence_dict based on current element of json file
+                evidence_dict[id]['verifiable'] = verifiable
+                evidence_dict[id]['label'] = label
+                evidence_dict[id]['claim'] = j['claim']
+
+                # initialize each id's evidence as an empty list
                 evidence_dict[id]['evidence'] = []
+
+                # add all evidence pieces
                 for e in j['evidence']:
                     for evidence in e:
                         anno_id = evidence[0]
@@ -65,24 +81,14 @@ def main():
                                 current_sentence = wiki_data[article_name][sentence_id].split('\t')[1]
                                 if current_sentence not in evidence_dict[id]['evidence']:
                                     evidence_dict[id]['evidence'].append(current_sentence)
-                                #print("evidence_id:(", evidence_id, ")\narticle_name:(", article_name, ")\nsentence_id:(", sentence_id, ")")
                             except KeyError as e:
                                 print(article_name, ' is not in available evidence.')
                                 pass
-                # change 'verifiable' and 'label' into integers for easier manipulation
-                if j['verifiable'] == 'VERIFIABLE':
-                    verifiable = 1
-                else:
-                    verifiable = 0
-                if j['label'] == 'SUPPORTS':
-                    label = 1
-                elif j['label'] == 'REFUTES':
-                    label = 2
-                else:
-                    label = 0
-                evidence_dict[id]['verifiable'] = verifiable
-                evidence_dict[id]['label'] = label
-                evidence_dict[id]['claim'] = j['claim']
+
+        # dictionaries separating data into their categories (supports, refutes, nei)
+        supports_dict = {}
+        refutes_dict = {}
+        nei_dict = {}
 
         # sort data into supports/refutes/nei
         for key, data in evidence_dict.items():
@@ -93,10 +99,10 @@ def main():
             else:
                 nei_dict[key] = data
 
+        # compile lists of ids for support, refute, nei
         support_keys = list(supports_dict.keys())
         refute_keys = list(refutes_dict.keys())
         nei_keys = list(nei_dict.keys())
-        #print(len(support_keys), len(refute_keys), len(nei_keys))
 
         # separate data into test, eval, and train (eval and test should each have 14500 data entries; train gets the rest)
         n = 14500 // 3
@@ -115,6 +121,7 @@ def main():
         shuffle(eval_keys)
         shuffle(test_keys)
 
+        # write to each csv file
         files = [(train_keys, train_data), (eval_keys, eval_data), (test_keys, test_data)]
         for keys, file in files:
             for k in keys:
@@ -123,8 +130,6 @@ def main():
                 except KeyError as e:
                     print(e)
                     raise
-
-                #csv_data.writerow([int(id), verifiable, label, evidence_dict[id]['claim'], evidence_dict[id]['evidence_dict']])
 
 
 if __name__ == '__main__':
