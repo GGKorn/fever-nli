@@ -207,9 +207,9 @@ if __name__ == "__main__":
     # print(ds_gen())
     i = 0
     for a,b,c,d,e,f in ds_gen():
-        print(a[:2], b[:2],c.shape,d.shape)
+        print(a[0].shape, len(b[:2]),c.shape,d.shape)
         i += 1
         print(i)
-        if i > 10:
+        if i > 2:
             break
     print("iterations: ", i)
