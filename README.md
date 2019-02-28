@@ -1,12 +1,11 @@
 # ANLP Final Project: Claim Verification
 
 Uni Potsdam WiSe 2018/19
+
 Dr. Tatjana Scheffler
 
 Group Members:
-Gunnar Gerstenkorn
-Benjamin Henne
-Alexandra Horsley
+Gunnar Gerstenkorn, Benjamin Henne, Alexandra Horsley
 
 ## Project Summary
 This project is largely based on the Fact Extraction and Verification (FEVER) challenge, the first iteration of which occurred in late 2018. This implementation is a decomposable attention neural network (a variant of Bahdanau et al.'s Neural Machine Translation model) that predicts textual entailment resulting from multiple pieces of evidence. Given a claim and a number of sentences or other pieces of information from Wikipedia articles (hyperlinks, the title of the source article), this neural network infers whether the given piece(s) of evidence support(s) or refute(s) the given claim, or if there is not enough information given.
@@ -40,10 +39,11 @@ Alternatively, one could use the pre-cleaned data in the existing `extended_wiki
 2. Download the [fever.ai dataset](https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl) and [June 2017 Wikipedia dump](https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip) to the `data` directory
 3. `python compose_dataset_vanilla.py`
 4. `python compose_dataset_extended.py`
+
 *This will yield a total of six files. If any of them are too large for any reason, one could use the split_data.py protocol*
 
 ### Step 3: Parse the data and implement the baseline model
-From the main anlp_final_project/src directory
+From the `anlp_final_project/src` directory
 ```
 python input_fnc.py
 python model_fnc.py
@@ -51,7 +51,7 @@ python main.py
 ```
 
 ### Step 4: Parse the data and implement the DA model
-From the anlp_final_project/src directory
+From the `anlp_final_project/src` directory
 ```
 python input_da.py
 python model_da.py
