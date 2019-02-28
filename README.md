@@ -40,6 +40,7 @@ Alternatively, one could use the pre-cleaned data in the existing `extended_wiki
 2. Download the [fever.ai dataset](https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl) and [June 2017 Wikipedia dump](https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip) to the `data` directory
 3. `python compose_dataset_vanilla.py`
 4. `python compose_dataset_extended.py`
+
 *This will yield a total of six files. If any of them are too large for any reason, one could use the split_data.py protocol*
 
 ### Step 3: Parse the data and implement the baseline model
