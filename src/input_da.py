@@ -128,21 +128,27 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
         else:
             print("longest claim",claim_max_len,claims[max_len_index])
 
+        batch_start = 0
+        for batch_end in range(batch_size, len(claims), batch_size):
 
-        for i in range(len(claims)):
-            emb_claims = lookup_em(claims[i])
-            emb_claim_len = len(emb_claims)
-            emb_claims = emb_claims + [] * (claim_max_len - emb_claim_len)
-            emb_eviden = lookup_em(evidences[i])
-            emb_eviden_len = len(emb_eviden)
+            emb_claim_lens, emb_eviden_lens = [],[]
+            for i in range(batch_start,batch_end,1):
+                emb_claims = lookup_em(claims[i])
+                emb_claim_len = len(emb_claims)
+                emb_claim_lens.append(emb_claim_len)
 
+                emb_eviden = lookup_em(evidences[i])
+                emb_eviden_len = len(emb_eviden)
+                emb_eviden_lens.append(emb_eviden_len)
 
+                emb_eviden[i] = np.pad(emb_eviden[i], (0, (evid_max_len - emb_eviden_len)), mode='constant')
+                emb_claims[i] = np.pad(emb_claims[i], (0, (claim_max_len - emb_claim_len)), mode='constant')
 
-            if emb_eviden_len < 1 or emb_claim_len < 1:
-                pass
-            else:
-                # TODO: (500,)
-                yield emb_claims, emb_eviden, emb_eviden_len, emb_claim_len, labels[i], verify_labels[i]
+            assert emb_eviden_len < 1 or emb_claim_len < 1, "how to deal with empty evidence?"
+            # TODO: insert null token to deal with empty evidence
+            # TODO: delete assertion
+            # TODO: (500,) form
+            yield emb_claims[batch_start:batch_end], emb_eviden[batch_start:batch_end], emb_eviden_lens, emb_claim_lens, labels[batch_start:batch_end], verify_labels[batch_start:batch_end]
 
     return _load_fever
 
