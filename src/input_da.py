@@ -2,7 +2,7 @@ import tensorflow as tf
 from ast import literal_eval
 import os
 import numpy as np
-import scipy
+import scipy as sp
 from glob import iglob
 import pandas as pd
 import unicodedata
@@ -150,11 +150,8 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
 
                 # add zero-pad in front, also helps with empty evidences
                 # zero-pad up to max_sent_length
-                a = emb_evidence[batch_intern_index]
-                b = evid_max_len
-                c = emb_evidence_lens[batch_intern_index]
 
-                emb_evidence[batch_intern_index] = np.pad(a, (1, (b - c)), mode='constant')
+                emb_evidence[batch_intern_index] = np.pad(emb_evidence[batch_intern_index], (1, (evid_max_len - emb_evidence_lens[batch_intern_index])), mode='constant')
                 emb_claims[batch_intern_index] = np.pad(emb_claims[batch_intern_index], (1, (claim_max_len - emb_claim_lens[batch_intern_index])), mode='constant')
 
             emb_evidence_lens, emb_claim_lens = np.array(emb_evidence_lens).reshape((batch_size,)), np.array(emb_claim_lens).reshape((batch_size,))
