@@ -95,11 +95,22 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
         claims, evidences, labels, verify_labels, ev_len, max_ev_len, cl_len, max_cl_len = get_fever_claim_evidence_pairs(file)
         # to extract word vector
         print("max_ev_len {}, max_cl_len {}".format(max_ev_len,  max_cl_len))
-        lookup_em = lambda x: [emb_vectors[token] for token in x.split()]
+        #lookup_em = lambda x: [emb_vectors[token] for token in x.split() if token in emb_vectors]
+
+        def lookup_em(x,emb_vectors):
+
+            embedding_list = []
+            for token in x.split():
+                if token in emb_vectors:
+                    embedding_list.append(emb_vectors[token])
+                else:
+                    embedding_list.append(np.random.uniform(size=(emb_size)))
+            return embedding_list
+
 
         for i in range(len(claims)):
-            emb_claims = lookup_em(claims[i])
-            emb_eviden = lookup_em(evidences[i])
+            emb_claims = lookup_em(claims[i],emb_vectors)
+            emb_eviden = lookup_em(evidences[i],emb_vectors)
 
             yield emb_claims, emb_eviden, ev_len[i], cl_len[i], labels[i], verify_labels[i]
 
@@ -121,9 +132,9 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     evidence_concat = data_frame["evidence"].apply(concatenate)
     # TODO: check if specifing col is required
     ev_len = evidence_concat.map(lambda x: len(x))
-    max_ev_len = evidence_concat.map(lambda x: len(x)).max()
+    max_ev_len = evidence_concat.map(lambda x: len(x.split())).max()
     cl_len = data_frame["claim"].map(lambda x: len(x))
-    max_cl_len = data_frame["claim"].map(lambda x: len(x)).max()
+    max_cl_len = data_frame["claim"].map(lambda x: len(x.split())).max()
     if concat_evidence:
         evidence_list = list(evidence_concat)
     else:
@@ -148,7 +159,9 @@ if __name__ == "__main__":
     ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath),vectors)
     # print(ds_gen())
     i = 0
-    for a,b in ds_gen():
-        print(np.shape(a), np.shape(b))
+    for a,b,c,d,e,f in ds_gen():
+        print(np.shape(a), np.shape(b),e,f)
         i += 1
+        if i > 10:
+            break
     print("iterations: ", i)
