@@ -131,24 +131,23 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
         batch_start = 0
         for batch_end in range(batch_size, len(claims), batch_size):
 
-            emb_claim_lens, emb_eviden_lens = [],[]
+            emb_claims, emb_evidence = [],[]
+            emb_claim_lens, emb_evidence_lens = [],[]
             for i in range(batch_start,batch_end,1):
-                emb_claims = lookup_em(claims[i])
-                emb_claim_len = len(emb_claims)
-                emb_claim_lens.append(emb_claim_len)
+                single_claim = lookup_em(claims[i])
+                emb_claims.append(single_claim)
+                emb_claim_lens.append(len(single_claim))
 
-                emb_eviden = lookup_em(evidences[i])
-                emb_eviden_len = len(emb_eviden)
-                emb_eviden_lens.append(emb_eviden_len)
+                single_evidence = lookup_em(evidences[i])
+                emb_evidence.append(single_evidence)
+                emb_evidence_lens.append(len(single_evidence))
 
-                emb_eviden[i] = np.pad(emb_eviden[i], (0, (evid_max_len - emb_eviden_len)), mode='constant')
-                emb_claims[i] = np.pad(emb_claims[i], (0, (claim_max_len - emb_claim_len)), mode='constant')
+                emb_evidence[i] = np.pad(emb_evidence[i], (1, (evid_max_len - emb_evidence_lens)), mode='constant')
+                emb_claims[i] = np.pad(emb_claims[i], (1, (claim_max_len - emb_claim_lens)), mode='constant')
 
-            assert emb_eviden_len < 1 or emb_claim_len < 1, "how to deal with empty evidence?"
-            # TODO: insert null token to deal with empty evidence
-            # TODO: delete assertion
             # TODO: (500,) form
-            yield emb_claims[batch_start:batch_end], emb_eviden[batch_start:batch_end], emb_eviden_lens, emb_claim_lens, labels[batch_start:batch_end], verify_labels[batch_start:batch_end]
+            yield emb_claims[batch_start:batch_end], emb_evidence[batch_start:batch_end], emb_evidence_lens, emb_claim_lens, labels[batch_start:batch_end], verify_labels[batch_start:batch_end]
+            batch_start = batch_end
 
     return _load_fever
 
