@@ -1,0 +1,17 @@
+json
+os
+sys
+csv
+numpy
+unicodedata
+collections
+random
+tensorflow
+argparse
+inspect
+input
+gensim
+ast
+scipy
+glob
+pandas

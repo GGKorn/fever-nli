@@ -21,14 +21,6 @@ def main():
         new_list = [x for x in some_list if x not in res]
         return res, new_list
 
-    # def normalize_sentence(encoded_sentence):
-    #     """
-    #     Input: sentence with encodings (string)
-    #     Output: normalized sentence (string)
-    #     """
-    #     sent = encoded_sentence.split(' ')
-    #     return ' '.join([normalize('NFD', s) for s in sent])
-
     def extract_sentence_with_tags(nested_dictionary, article_id, sentence):
         """
         Inputs: nested dictionary with lists, article name (string), sentence (integer index)
@@ -62,12 +54,27 @@ def main():
                 j = json.loads(itm)
                 id = str(j['id'])
                 evidence_dict[id] = {}
-                #dictionaries separating data into their categories (supports, refutes, nei)
-                supports_dict = {}
-                refutes_dict = {}
-                nei_dict = {}
-                #initialize each id's evidence as an empty list
+
+                # change 'verifiable' and 'label' into integers for easier manipulation
+                if j['verifiable'] == 'VERIFIABLE':
+                    verifiable = 1
+                else:
+                    verifiable = 0
+                if j['label'] == 'SUPPORTS':
+                    label = 1
+                elif j['label'] == 'REFUTES':
+                    label = 2
+                else:
+                    label = 0
+
+                evidence_dict[id]['verifiable'] = verifiable
+                evidence_dict[id]['label'] = label
+                evidence_dict[id]['claim'] = j['claim']
+
+                # initialize each id's evidence as an empty list
                 evidence_dict[id]['evidence'] = []
+
+                # add all evidence pieces
                 for e in j['evidence']:
                     for evidence in e:
                         anno_id = evidence[0]
@@ -106,20 +113,10 @@ def main():
                                 print(article_name, ' is not in available evidence.')
                                 pass
 
-                # change 'verifiable' and 'label' into integers for easier manipulation
-                if j['verifiable'] == 'VERIFIABLE':
-                    verifiable = 1
-                else:
-                    verifiable = 0
-                if j['label'] == 'SUPPORTS':
-                    label = 1
-                elif j['label'] == 'REFUTES':
-                    label = 2
-                else:
-                    label = 0
-                evidence_dict[id]['verifiable'] = verifiable
-                evidence_dict[id]['label'] = label
-                evidence_dict[id]['claim'] = j['claim']
+        # dictionaries separating data into their categories (supports, refutes, nei)
+        supports_dict = {}
+        refutes_dict = {}
+        nei_dict = {}
 
         # sort data into supports/refutes/nei and get a list of those evidence ids
         for key, data in evidence_dict.items():
@@ -130,6 +127,7 @@ def main():
             else:
                 nei_dict[key] = data
 
+        # compile lists of ids for support, refute, nei
         support_keys = list(supports_dict.keys())
         refute_keys = list(refutes_dict.keys())
         nei_keys = list(nei_dict.keys())
