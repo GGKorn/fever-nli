@@ -28,14 +28,32 @@ This model was tested against two types of training data: the vanilla variation 
 
 
 ## Implementing the Model
+
+### Step 1: Download and install necessary items
 1. Run `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_final_project.git`
 2. `cd anlp_final_project`
 3. Download all packages needed if not currently present on your machine: `pip install -r required_packages.txt`
 
-### Optional: Compose the datasets
+### Step 2 (Optional): Compose the datasets
 Alternatively, one could use the pre-cleaned data in the existing `extended_wiki_data` and `vanilla_wiki_data` folders.
 1. `cd data`
 2. Download the [fever.ai dataset](https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl) and [June 2017 Wikipedia dump](https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip) to the `data` directory
 3. `python compose_dataset_vanilla.py`
 4. `python compose_dataset_extended.py`
 *This will yield a total of six files. If any of them are too large for any reason, one could use the split_data.py protocol*
+
+### Step 3: Parse the data and implement the baseline model
+From the main anlp_final_project/src directory
+```
+python input_fnc.py
+python model_fnc.py
+python main.py
+```
+
+### Step 4: Parse the data and implement the DA model
+From the anlp_final_project/src directory
+```
+python input_da.py
+python model_da.py
+python main.py
+```
