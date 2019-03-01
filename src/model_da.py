@@ -1,6 +1,10 @@
 import tensorflow as tf
 
 class DecomposibleAttentionModel(object):
+    """
+    Implementation of the model described in "A Decomposible Attention Model for Natural Language Inference", published
+    by Parikh et al. in 2016.
+    """
     def __init__(self, features, labels, mode, hparams):
         """
         Initialises the model with parameters passed from the estimator.
@@ -20,13 +24,6 @@ class DecomposibleAttentionModel(object):
         self.labels         = labels[0]     # [?], sparse labels
         self.verifiable     = labels[1]     # [?], whether or not ev-cl pair is verifiable (has enough info)
         self.global_step    = tf.Variable(0, trainable=False, name='global_step')
-
-        # print('evidence\t', self.evidence)
-        # print('claims\t\t', self.claims)
-        # print('evidence_len\t', self.evidence_len)
-        # print('claims_len\t', self.claims_len)
-        # print('labels\t\t', self.labels)
-        # print('verifiable\t', self.verifiable)
 
         # fixed hyperparameters that will not be available via commandline
         self.hidden_units = 200
@@ -72,14 +69,15 @@ class DecomposibleAttentionModel(object):
                 # EVAL EstimatorSpec
                 logits_verifiable = tf.cast(tf.greater(predicted_classes, 0), tf.int64)
                 self.eval_metric_ops = {
-                    'accuracy': tf.metrics.accuracy(labels=self.labels, predictions=predicted_classes),
-                    'true_pos': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'false_pos': tf.metrics.false_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'true_neg': tf.metrics.true_negatives(labels=self.verifiable, predictions=logits_verifiable),
-                    'false_neg': tf.metrics.false_negatives(labels=self.verifiable, predictions=logits_verifiable),
-                    'recall': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'precision': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'f1': tf.contrib.metrics.f1_score(labels=self.verifiable, predictions=logits_verifiable)
+                    'accuracy': tf.metrics.accuracy(labels=self.labels, predictions=predicted_classes)
+                    # malfunctioning in the current state
+                    # 'true_pos': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'false_pos': tf.metrics.false_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'true_neg': tf.metrics.true_negatives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'false_neg': tf.metrics.false_negatives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'recall': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'precision': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'f1': tf.contrib.metrics.f1_score(labels=self.verifiable, predictions=logits_verifiable)
                 }
 
             with tf.variable_scope('optimisation'):
