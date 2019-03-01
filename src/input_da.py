@@ -14,9 +14,10 @@ EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
 
 # W2V_PATH = r".\embedding\gensim_glove.6B.300d.txt"
-W2V_PATH = r"E:\Python\ANLP Final Project\data\embedding\gensim_glove.6B.300d.txt"
-emb_size_threshold = 500
-emb_size = 300
+W2V_PATH = r"E:\Python\ANLP Final Project\data\embedding\gensim_glove.6B.200d.txt"
+emb_size = 200
+
+global_embedding = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False)
 
 # from https://stackoverflow.com/questions/48057991/get-word-embedding-dictionary-with-glove-python-model
 # model.word_vectors[model.dictionary['samsung']]
@@ -39,31 +40,39 @@ def get_input_fn_da(mode=None):
         #   5. pass file name to load_fever
         #   6. load the already indexed data in load_fever
 
-        vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False)
+        vectors = global_embedding
 
+        batch_size = None
+        cutoff_len = params.cutoff_len
         with tf.device('/cpu:0'):
             if mode == 'train':
-                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TrainingPath), vectors, params.cutoff_len, params.batch_size)
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TrainingPath), vectors, cutoff_len, params.batch_size)
 
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
-                    output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64)
+                    output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64),
+                    output_shapes = ([batch_size, cutoff_len, emb_size], [batch_size, cutoff_len, emb_size],
+                                    [batch_size], [batch_size],[batch_size],[batch_size])
                 )
                 dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=10, count=None))
                 dataset = dataset.prefetch(buffer_size=1)
             elif mode == 'eval':
-                ds_gen = get_dataset_generator(os.path.join(params.data_dir, EvalPath), vectors, params.cutoff_len, params.eval_batch_size)
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, EvalPath), vectors, cutoff_len, params.batch_size)
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
-                    output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64)
+                    output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64),
+                    output_shapes = ([batch_size, cutoff_len, emb_size], [batch_size, cutoff_len, emb_size],
+                                    [batch_size], [batch_size],[batch_size],[batch_size])
                 )
                 # dataset = dataset.shuffle(buffer_size=1)
                 dataset = dataset.prefetch(buffer_size=1)
             elif mode == 'predict':
-                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TestPath), vectors, params.cutoff_len, params.eval_batch_size)
+                ds_gen = get_dataset_generator(os.path.join(params.data_dir, TestPath), vectors, cutoff_len, params.batch_size)
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
-                    output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64)
+                    output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64),
+                    output_shapes = ([batch_size, cutoff_len, emb_size], [batch_size, cutoff_len, emb_size],
+                                    [batch_size], [batch_size],[batch_size],[batch_size])
                 )
                 # dataset = dataset.shuffle(buffer_size=1)
                 dataset = dataset.prefetch(buffer_size=1)
@@ -101,18 +110,19 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
         def lookup_emb(target):
             embedding_list = []
             for i, token in enumerate(target.split()):
-                if i > cutoff_len:
+                # stop before cutoff length to prevent overshooting
+                if i > cutoff_len-2:
                     break
                 token = unicodedata.normalize("NFD",token)
                 if token in emb_vectors:
                     embedding_list.append(emb_vectors[token])
                 else:
-                    rand_embed = np.random.uniform(size=(emb_size))
+                    rand_embed = np.random.uniform(-0.5, 0.5, size=(emb_size))
                     embedding_list.append(rand_embed)
             return np.array(embedding_list).reshape(-1, emb_size)
 
         evid_max_len = cutoff_len - 1
-        claim_max_len = 60
+        claim_max_len = cutoff_len - 1
 
         batch_start = 0
         for batch_end in range(batch_size, len(claims), batch_size):
@@ -192,7 +202,7 @@ if __name__ == "__main__":
         vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False)
     emb = timer()
     print('Loading embeddings took {} seconds'.format(emb - start))
-    ds_gen = get_dataset_generator(os.path.join(local_test_path,TestPath),vectors, 500)
+    ds_gen = get_dataset_generator(os.path.join(local_test_path,TestPath),vectors, 400)
     i = 0
     for a,b,c,d,e,f in ds_gen():
         i += 1
@@ -202,3 +212,9 @@ if __name__ == "__main__":
     print("iterations: ", i)
     end = timer()
     print("Preprocessing and batching took {} seconds".format(end - emb))
+    # fn = get_input_fn_da()
+    # for itr in fn(mode=tf.estimator.ModeKeys.TRAIN):
+    #     for itm in itr:
+    #         for i in itm:
+    #             print(i)
+    #         break
