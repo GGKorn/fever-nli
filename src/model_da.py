@@ -12,6 +12,7 @@ class DecomposibleAttentionModel(object):
             hparams:    command line arguments specifying hyperparameters
         """
         self.hparams        = hparams
+        self.mode           = mode
         self.evidence       = features[1]   # [?, sentence_length, embedding_size], pre-embedded
         self.evidence_len   = features[2]   # [?, 1], token length of evidence lists
         self.claims         = features[0]   # [?, sentence_length, embedding_size], pre-embedded
@@ -21,8 +22,6 @@ class DecomposibleAttentionModel(object):
         self.global_step    = tf.Variable(0, trainable=False, name='global_step')
 
         # fixed hyperparameters that will not be available via commandline
-        self.len_sentence = None
-        self.vocab_size = None
         self.embedding_size = 300
         self.hidden_units = 200
         self.l2_lambda = 0.001
@@ -170,14 +169,14 @@ class DecomposibleAttentionModel(object):
         """
         with tf.variable_scope(scope, reuse=reuse):
             with tf.variable_scope('layer1'):
-                layer = tf.nn.dropout(input, self.dropout_keep_prob)
+                layer = tf.layers.dropout(input, (1 - self.dropout_keep_prob), training=(self.mode == tf.estimator.ModeKeys.TRAIN))
                 layer = tf.layers.dense(layer,
                                         size,
                                         activation=tf.nn.relu,
                                         kernel_initializer=tf.contrib.layers.variance_scaling_initializer())
 
             with tf.variable_scope('layer2'):
-                layer = tf.nn.dropout(layer, self.dropout_keep_prob)
+                layer = tf.layers.dropout(layer, (1 - self.dropout_keep_prob), training=(self.mode == tf.estimator.ModeKeys.TRAIN))
                 layer = tf.layers.dense(layer,
                                         size,
                                         activation=tf.nn.relu,
