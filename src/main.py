@@ -109,6 +109,7 @@ def main(**hparams):
     tf.logging.info('Finishing execution at {}.\n'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
 
 if __name__ == '__main__':
+    # Parsing of command line arguments for model hyperparameter settings
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-m', '--model',
