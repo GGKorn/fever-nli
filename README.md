@@ -32,13 +32,16 @@ Please note that this can be quite lengthy. Python 3.5.4 is required.
 ### Step 1: Download and install necessary items
 1. Clone the repository: `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_claim_verification.git`
 2. `cd anlp_claim_verification`
-3. Supply your Python environment with all packages needed that are not currently present on your machine: `pip install -r required_packages.txt`
+3. Supply your Python environment with all packages needed that are not currently present on your machine:
+`pip install -r required_packages.txt`
 
 ### Step 2 (Optional): Compose the datasets
 Alternatively, one could use the pre-cleaned data in the existing `extended_wiki_data` and `vanilla_wiki_data` folders.
 1. `cd data`
-2. Download the [fever.ai dataset](https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl): `wget -P https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl`
-3. Download and unzip the [June 2017 Wikipedia dump](https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip): `wget -P https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip`
+2. Download the [fever.ai dataset](https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl):
+`wget -P https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl`
+3. Download and unzip the [June 2017 Wikipedia dump](https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip):
+`wget -P https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip`
 3. `python compose_dataset_vanilla.py`
 4. `python compose_dataset_extended.py`
 
@@ -64,4 +67,4 @@ From the root directory `anlp_claim_verification`:
 python src/main.py -m 2 -i data/vanilla_wiki_data -o results/ -b 32 -e 2000 -l 0.05 -s 5000 -j <..> -a <..>
 python src/main.py -m 2 -i data/extended_wiki_data -o results/ -b 32 -e 2000 -l 0.05 -s 5000 -j <..> -a <..>
 ```
-This will begin the training of the decomposable attention model. The batch size has been increased from 4 as proposed in the model to 32 to provide a more accurate representation of the dataset as a whole. The overall process of manufacturing batches is less costly for this model, so the evaluation batch size could be increased substantially as well to provide more accurate evaluation metrics. Other hyperparameters remain unchanged with regard to Step 4.
+This will begin the training of the decomposable attention model. The batch size has been increased from 4 as proposed in the paper to 32 to provide a more accurate representation of the dataset as a whole. The overall process of manufacturing batches is less costly for this model, so the evaluation batch size could be increased substantially as well to provide more accurate evaluation metrics. Other hyperparameters remain unchanged with regard to Step 4.
