@@ -8,7 +8,7 @@ Group Members:
 Gunnar Gerstenkorn, Benjamin Henne, Alexandra Horsley
 
 ## Project Summary
-This project is largely based on the Fact Extraction and Verification (FEVER) challenge, the first iteration of which occurred in late 2018. This implementation is a decomposable attention neural network (proposed by Parikh et al. in 2016, utilising Luong Attention (2015) to perform neural machine translation) that predicts textual entailment resulting from multiple pieces of evidence. Given a claim and a number of sentences or other pieces of information from Wikipedia articles (hyperlinks, the title of the source article), this neural network infers whether the given piece(s) of evidence support(s) or refute(s) the given claim, or if there is not enough information given.
+This project is largely based on the Fact Extraction and Verification (FEVER) challenge, the first iteration of which occurred in late 2018. This implementation is a decomposable attention neural network (proposed by [Parikh et al. in 2016](https://arxiv.org/abs/1606.01933), utilising [Luong Attention (2015)](https://arxiv.org/abs/1508.04025) to perform neural machine translation) that predicts textual entailment resulting from multiple pieces of evidence. Given a claim and a number of sentences or other pieces of information from Wikipedia articles (hyperlinks, the title of the source article), this neural network infers whether the given piece(s) of evidence support(s) or refute(s) the given claim, or if there is not enough information given.
 
 We used word embeddings, sentence alignment, and other linguistic features to perform this natural language inference task, and this particular implementation has a feed-forward structure.
 
