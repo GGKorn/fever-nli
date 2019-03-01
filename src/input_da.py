@@ -20,7 +20,6 @@ with open('./config/config.yaml') as cnf:
     try:
         W2V_PATH = configs['embed_path']
         EMBEDDING_SIZE = configs['embed_dims']
-        print(W2V_PATH, EMBEDDING_SIZE, "yaml success!!")
     except KeyError as e:
         print('Missing flags in the config file were found!')
         sys.exit(1)
