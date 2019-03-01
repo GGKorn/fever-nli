@@ -1,7 +1,9 @@
 import tensorflow as tf
 
 class SimpleBaselineModel(object):
-    """Implementation of single hidden-layer FFN model of the FEVER baseline."""
+    """
+    Implementation of single hidden-layer FFN model of the FEVER baseline.
+    """
     def __init__(self, features, labels, mode, hparams):
         """Initialises the model with all components."""
         self.hparams = hparams
@@ -23,7 +25,8 @@ class SimpleBaselineModel(object):
 
     def _build_model(self, mode):
         """
-        Builds the model and prepares return values for EstimatorSpecs.
+        Builds the model and prepares return values for EstimatorSpecs. Single-layer feed-forward network, relu-activated,
+        He-initialised (Delving Deep Into Rectifiers, He et al. 2015) and dropout-regularised.
 
         Parameters:
             mode:   tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes purpose of current run
@@ -35,9 +38,8 @@ class SimpleBaselineModel(object):
                 model = tf.layers.dense(self.inputs, 
                                         self.hidden_units,
                                         activation=tf.nn.relu,
-                                        kernel_initializer=tf.keras.initializers.he_uniform(),
+                                        kernel_initializer=tf.contrib.layers.variance_scaling_initializer(),
                                         name='dense01')
-                # 1st dropout
                 model = tf.layers.dropout(model, (1 - self.dropout_keep_prob), training=isTraining)
             
             with tf.variable_scope('output_layer'):
@@ -46,8 +48,6 @@ class SimpleBaselineModel(object):
                                         self.logit_dims,
                                         activation=None,
                                         name='logits')
-                # 2nd dropout, god knows why...
-                # model = tf.layers.dropout(model, (1 - self.dropout_keep_prob), training=isTraining)
                 self.logits = tf.reshape(model, [self.hparams.batch_size, self.logit_dims])
 
             # objective ops
