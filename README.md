@@ -21,8 +21,8 @@ This model was tested against two types of training data: the vanilla variation 
 
 | FEVER Baseline Model &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;| Accuracy |
 |----------------------|----------|
-| Vanilla              | 0.7948   |
-| Extended             | 0.7943   |
+| Vanilla              | 0.6681   |
+| Extended             | 0.6646   |
 
 | Decomposable Attention Model | Accuracy |
 |------------------------------|----------|
