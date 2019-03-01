@@ -32,16 +32,13 @@ Please note that this can be quite lengthy. Python 3.5.4 is required.
 ### Step 1: Download and install necessary items
 1. Clone the repository: `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_claim_verification.git`
 2. `cd anlp_claim_verification`
-3. Supply your Python environment with all packages needed that are not currently present on your machine:
-`pip install -r required_packages.txt`
+3. Supply your Python environment with all packages needed that are not currently present on your machine: `pip install -r required_packages.txt`
 
 ### Step 2 (Optional): Compose the datasets
-Alternatively, one could use the pre-cleaned data in the existing `extended_wiki_data` and `vanilla_wiki_data` folders.
+Alternatively, one could use the pre-cleaned data in the existing `extended_wiki_data` and `vanilla_wiki_data` folders. These files have already undergone the instructions of Step 2.
 1. `cd data`
-2. Download the [fever.ai dataset](https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl):
-`wget -P https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl`
-3. Download and unzip the [June 2017 Wikipedia dump](https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip):
-`wget -P https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip`
+2. Download the [fever.ai dataset](https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl): `wget -P https://s3-eu-west-1.amazonaws.com/fever.public/train.jsonl`
+3. Download and unzip the [June 2017 Wikipedia dump](https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip): `wget -P https://s3-eu-west-1.amazonaws.com/fever.public/wiki-pages.zip`
 3. `python compose_dataset_vanilla.py`
 4. `python compose_dataset_extended.py`
 
@@ -59,7 +56,7 @@ From the root directory `anlp_claim_verification`:
 python src/main.py -m 1 -i data/vanilla_wiki_data -o results/ -b 500 -e 500 -l 0.01 -s 5000 -j <..> -a <..>
 python src/main.py -m 1 -i data/extended_wiki_data -o results/ -b 500 -e 500 -l 0.01 -s 5000 -j <..> -a <..>
 ```
-This will start the training of the baseline (`-m 1`) model, using the vanilla dataset (`-i data/vanilla_wiki_data`), depositing results, checkpoints and graph summaries into a corresponding folder in results (`-o results/`). Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`) that will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `- a` with any value larger than 1.
+Each of these commands will start the training of the baseline (`-m 1`) model, using either the vanilla dataset (`-i data/vanilla_wiki_data`) or the extended dataset (`-i data/extended_wiki_data`), depositing results, checkpoints and graph summaries into a corresponding folder in results (`-o results/`). Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`) that will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `- a` with any value larger than 1.
 
 ### Step 5: Parse the data and implement the DA model
 From the root directory `anlp_claim_verification`:
