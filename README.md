@@ -17,17 +17,17 @@ This model also includes the FEVER baseline model as a means to provide context/
 Further information can be found in the forthcoming project reports.
 
 ## Results
-This model was tested against two types of training data: the vanilla variation only contains the evidence sentences given, and the extended variation includes the article title, tags appended to the end of each sentence, and additional context sentences (those surrounding the given piece of evidence, as well as the first sentence of the given text, if these are not already included in evidence). These achieved the following **accuracies**:
+This model was tested against two types of training data: the vanilla variation only contains the evidence sentences given, and the extended variation includes the article title, tags appended to the end of each sentence, and additional context sentences (those surrounding the given piece of evidence, as well as the first sentence of the given text, if these are not already included in evidence). These achieved the following accuracies:
 
 | FEVER Baseline Model | Accuracy |
 |----------------------|----------|
 | Vanilla              | 0.7948   |
 | Extended             | 0.7943   |
 
-| DA Model | Accuracy |
-|----------|----------|
-| Vanilla  | 0.7948   |
-| Extended | 0.7943   |
+| Decomposable Attention Model | Accuracy |
+|------------------------------|----------|
+| Vanilla                      | 0.7948   |
+| Extended                     | 0.7943   |
 
 
 ## Setting up the Model
