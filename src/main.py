@@ -102,6 +102,9 @@ def main(**hparams):
             tf.estimator.EvalSpec(input_fn=get_input_fn(mode=tf.estimator.ModeKeys.EVAL), throttle_secs=1, steps=None)
         )
 
+        # Evaluate model performance on the test set after training process finishes
+        classifier.evaluate(input_fn=get_input_fn(mode='predict'), name='test')
+
         tf.logging.info('Finished iteration {} of {}.'.format((i+1), hparams['repeats']))
     tf.logging.info('Finishing execution at {}.\n'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
 
