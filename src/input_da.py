@@ -1,7 +1,9 @@
 import os
+import sys
+import yaml
+import argparse
 import unicodedata
 import numpy as np
-import argparse
 import pandas as pd
 import tensorflow as tf
 from glob import iglob
@@ -12,13 +14,19 @@ TrainingPath = "train_data_*.csv"
 EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
 
+# read embed path and dimensions from config file
+with open('./config/config.yaml') as cnf:
+    configs = yaml.load(cnf)
+    try:
+        W2V_PATH = configs['embed_path']
+        EMBEDDING_SIZE = configs['embed_dims']
+        print(W2V_PATH, EMBEDDING_SIZE, "yaml success!!")
+    except KeyError as e:
+        print('Missing flags in the config file were found!')
+        sys.exit(1)
 
-
-# alternative path
-#W2V_PATH = r".\embedding\gensim_glove.6B.300d.txt"
-W2V_PATH = r"E:\Python\ANLP Final Project\data\embedding\gensim_glove.6B.200d.txt"
-EMBEDDING_SIZE = 200
-
+# load embedding file once here, then later retrieve it to prevent garbage collection and re-loading that would increase
+# runtime polynomially
 global_embedding = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False)
 
 def get_input_fn_da(mode=None):
@@ -42,12 +50,15 @@ def get_input_fn_da(mode=None):
             An (one-shot) iterator containing (data, label) tuples
         """
 
+        # load embeddings
         vectors = global_embedding
 
+        # specify "display" batch size for the output shapes of the iterators 
         batch_size = None
         cutoff_len = params.cutoff_len
         with tf.device('/cpu:0'):
             if mode == 'train':
+                # dataset generator method takes the actual batch size because it relies on that for batch production
                 ds_gen = get_dataset_generator(os.path.join(params.data_dir, TrainingPath), vectors, cutoff_len, params.batch_size)
 
                 dataset = tf.data.Dataset.from_generator(
@@ -56,7 +67,10 @@ def get_input_fn_da(mode=None):
                     output_shapes = ([batch_size, cutoff_len, EMBEDDING_SIZE], [batch_size, cutoff_len, EMBEDDING_SIZE],
                                      [batch_size], [batch_size], [batch_size], [batch_size])
                 )
+                # shuffles and repeats the dataset. Relatively low shuffle buffer due to memory constraints, but randomness
+                # should nevertheless be guaranteed
                 dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=10, count=None))
+                # prefetching prepares another batch in case the CPU is idling during GPU computations
                 dataset = dataset.prefetch(buffer_size=1)
             elif mode == 'eval':
                 ds_gen = get_dataset_generator(os.path.join(params.data_dir, EvalPath), vectors, cutoff_len, params.batch_size)
@@ -79,7 +93,11 @@ def get_input_fn_da(mode=None):
             else:
                 raise ValueError('_input_fn received invalid MODE')
 
+            # turn dataset into an iterator, set the functions return value as the first object in the iterator
             dataset = dataset.make_one_shot_iterator().get_next()
+            # construct tuple out of the 6 different iterators, since tf.estimator expects 2 inputs: features and labels
+            # the first 4 iterators (claims, evidence, evidence_length, claim_length) form the features, labels is formed
+            # by (labels, verifiable_labels)
             return (dataset[0], dataset[1], dataset[2], dataset[3]), (dataset[4], dataset[5])
 
     return _input_fn
@@ -123,6 +141,8 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
                 # stop before cutoff length to prevent overshooting
                 if i > cutoff_len-2:
                     break
+                # normalise the strings prior to using them for lookups to remove unicode characters that would break
+                # dictionary access
                 token = unicodedata.normalize("NFD",token)
                 if token in emb_vectors:
                     embedding_list.append(emb_vectors[token])
@@ -136,6 +156,9 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
         claim_max_len = cutoff_len - 1
 
         batch_start = 0
+        # iteration steps are batch_size large. This leads to a cutoff effect at the end of a dataset iteration that drops
+        # leftover samples below the specified batch size. Partly because Tensorflow cannot handle irregular batch sizes,
+        # but also because smaller batches do not represent the dataset as well
         for batch_end in range(batch_size, len(claims), batch_size):
             emb_claims, emb_evidence = [],[]
             emb_claim_lens, emb_evidence_lens = [], []
@@ -158,6 +181,7 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
                 emb_claims.append(single_claim_emb)
                 emb_evidence.append(single_evidence_emb)
 
+            # stack all the finished collections to turn them into numpy arrays for tensor-processing
             yield   np.stack(emb_claims), \
                     np.stack(emb_evidence), \
                     np.stack(emb_evidence_lens), \
@@ -184,6 +208,7 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     file_list = iglob(file_pattern)
     # converter reads in string in csv cell as list
     converter = {"evidence": literal_eval}
+    # reads in all files that match the provided file pattern handle and concatenates them into one record
     data_frame = pd.concat(pd.read_csv(f, converters=converter) for f in file_list)
 
     concatenate = lambda x: " ".join(x)
