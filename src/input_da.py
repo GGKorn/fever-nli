@@ -2,7 +2,7 @@ import tensorflow as tf
 from ast import literal_eval
 import os
 import numpy as np
-import scipy as sp
+from scipy import sparse
 from glob import iglob
 import pandas as pd
 import unicodedata
@@ -97,65 +97,49 @@ def get_dataset_generator(file, emb_vectors, batch_size=500):
         #lookup_em = lambda x: [emb_vectors[token] for token in x.split() if token in emb_vectors]
 
         def lookup_em(x):
-
             embedding_list = []
-            for token in x.split():
+            for i,token in enumerate(x.split()):
                 token = unicodedata.normalize("NFD",token)
                 if token in emb_vectors:
                     embedding_list.append(emb_vectors[token])
                 else:
                     rand_embed = np.random.uniform(size=(emb_size if emb_size <= emb_size_threshold else emb_size_threshold))
                     embedding_list.append(rand_embed)
-            return embedding_list
+            return  embedding_list
 
-        # evid_max_len = map(lookup_em,evidences)
-        evid_max_len = 0
-        max_len_index = 0
-        for i,sent in enumerate(evidences):
-            sent_len = len(lookup_em(sent))
-            if sent_len > evid_max_len:
-                evid_max_len = sent_len
-                max_len_index = i
-        else:
-            print("longest evi",evid_max_len,unicodedata.normalize("NFD",evidences[max_len_index]))
-        #claim_max_len = map(lookup_em,claims)
-        claim_max_len = 0
-        max_len_index = 0
-        for i, sent in enumerate(claims):
-            sent_len = len(lookup_em(sent))
-            if sent_len > claim_max_len:
-                claim_max_len = sent_len
-                max_len_index = i
-        else:
-            print("longest claim",claim_max_len,claims[max_len_index])
+        def pad(x, respective_max_len):
+            x = sparse.coo_matrix(x)
+
+            print(x.dtype)
+            embedding_len = x.shape[1]
+            front_padding = sparse.coo_matrix(embedding_len * [0])
+            pad_len = respective_max_len - embedding_len
+            padding = sparse.coo_matrix(embedding_len * [pad_len * [0]])
+            p1 = sparse.hstack((front_padding.astype(float), sparse.coo_matrix(x).astype(float)))
+            p2 = sparse.hstack((p1, padding.astype(float)))
+            #padded_matrix = sparse.hstack((front_padding,x, padding ))
+            return p2 #added_matrix
+
+        N_data = len(claims)
+
+        claims= claims.apply(lookup_em)
+        cl_lens = claims.apply(lambda x: len(x))
+        claims = pad(claims,respective_max_len=cl_lens.max())
+
+        evidences = evidences.apply(lookup_em)
+        ev_lens = evidences.apply(lambda x: len(x))
+        evidences = pad(claims,respective_max_len=ev_lens.max())
 
         batch_start = 0
-        for batch_end in range(batch_size, len(claims), batch_size):
+        for batch_end in range(500, len(claims), batch_size):
+            claim_batch = claims[batch_start:batch_end]
+            evide_batch = evidences[batch_start:batch_end]
+            cl_le_batch = cl_lens[batch_start:batch_end]
+            ev_le_batch = ev_lens[batch_start:batch_end]
+            verif_batch = verify_labels[batch_start:batch_end]
+            label_batch = labels[batch_start:batch_end]
 
-            emb_claims, emb_evidence = [],[]
-            emb_claim_lens, emb_evidence_lens = [],[]
-            for batch_intern_index,i in enumerate(range(batch_start,batch_end,1)):
-
-                # get embdding for sentence
-                single_claim_emb = lookup_em(claims[i])
-                single_evidence_emb = lookup_em(evidences[i])
-
-                # fill length vector for output
-                emb_claim_lens.append(len(single_claim_emb))
-                emb_evidence_lens.append(len(single_evidence_emb))
-
-                # fill batches with embedded sentence
-                emb_claims.append(single_claim_emb)
-                emb_evidence.append(single_evidence_emb)
-
-                # add zero-pad in front, also helps with empty evidences
-                # zero-pad up to max_sent_length
-
-                emb_evidence[batch_intern_index] = np.pad(emb_evidence[batch_intern_index], (1, (evid_max_len - emb_evidence_lens[batch_intern_index])), mode='constant')
-                emb_claims[batch_intern_index] = np.pad(emb_claims[batch_intern_index], (1, (claim_max_len - emb_claim_lens[batch_intern_index])), mode='constant')
-
-            emb_evidence_lens, emb_claim_lens = np.array(emb_evidence_lens).reshape((batch_size,)), np.array(emb_claim_lens).reshape((batch_size,))
-            yield emb_claims, emb_evidence, emb_evidence_lens, emb_claim_lens, labels[batch_start:batch_end], verify_labels[batch_start:batch_end]
+            yield claim_batch, evide_batch, cl_le_batch, ev_le_batch, verif_batch, label_batch
             batch_start = batch_end
 
     return _load_fever
@@ -185,9 +169,9 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
         assert False, "No retrun of several evidences supported"
         #evidence_list = list(data_frame["evidence"])
 
-    claim_list = list(data_frame["claim"])
-    label_list = list(data_frame["label"])
-    verif_list = list(data_frame["verifiable"])
+    claim_list = data_frame["claim"]
+    label_list = data_frame["label"]
+    verif_list = data_frame["verifiable"]
 
     # print("loaded {} pairs".format(len(data_frame)))
     return claim_list, evidence_list, label_list, verif_list
