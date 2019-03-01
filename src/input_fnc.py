@@ -1,3 +1,5 @@
+import argparse
+
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -10,7 +12,7 @@ import scipy
 from glob import iglob
 
 
-debug = False
+
 TrainingPath = "train_data_*.csv"
 EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
@@ -143,13 +145,31 @@ def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
     return claim_list, evidence_list, document_list, label_list
 
 
-#if __name__ == "__main__":
-    # local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
-    # local_test_path = r"E:\Python\ANLP Final Project\data\vanilla_wiki_data"
-    # ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath))
-    # # print(ds_gen())
+if __name__ == "__main__":
+    # just for testing or visualisation purpose
+    pass
+
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("-f", "--input_file", help="absolute path to the training/test file", required=True)
+    # parser.add_argument("-b", "--max_batches", help="maximum of batches outputed")
+    # parser.add_argument("-s", "--batch_size", help="size of batches outputed", default=64)
+    #
+    #
+    # args = parser.parse_args()
+    # from timeit import default_timer as timer
+    #
+    # start = timer()
+    #
+    # ds_gen = get_dataset_generator(args.input_file, args.batch_size)
     # i = 0
-    # for a,b in ds_gen():
-    #     print(np.shape(a), np.shape(b))
+    # # (tf_claim, tfidf_sim, tf_evidence), label
+    # for data, labels in ds_gen():
+    #     claims, similarity, evidences = data
     #     i += 1
+    #     print(i, ":", claims.shape, labels.shape)
+    #     if args.max_batches and i > args.max_batches:
+    #         break
+    #
     # print("iterations: ", i)
+    # end = timer()
+    # print("Preprocessing and batching took {} seconds".format(end - start))

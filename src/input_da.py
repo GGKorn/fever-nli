@@ -8,7 +8,6 @@ from glob import iglob
 from ast import literal_eval
 from gensim.models.keyedvectors import KeyedVectors
 
-debug = False
 TrainingPath = "train_data_*.csv"
 EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
@@ -202,6 +201,7 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
 
 
 if __name__ == "__main__":
+    # just for testing or visualisation purpose
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--input_file", help="absolute path to the training/test file",required=True)
