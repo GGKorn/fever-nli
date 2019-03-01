@@ -26,8 +26,8 @@ This model was tested against two types of training data: the vanilla variation 
 - Extended: 0.7943
 
 
-## Implementing the Model
-Please note that this can be quite lengthy. Python 3.5.4 is required.
+## Setting up the Model
+Please note that this process can be quite lengthy. A 64-bit version of Python 3.5.4 is required.
 
 ### Step 1: Download and install necessary items
 1. Clone the repository: `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_claim_verification.git`
@@ -50,13 +50,15 @@ Alternatively, one could use the pre-cleaned data in the existing `extended_wiki
 3. Convert the GloVe embedding to gensim-compatible KeyedVectors format: `python -m gensim.scripts.glove2word2vec -i glove.6B.200d.txt -o gensim_glove.6B.200d.txt`
 4. Repeat this process for other dimensions of the GloVe embeddings you plan to use.
 
-### Step 4: Train the baseline mode and evaluate its performance:
+### Step 4: Train the baseline mode and evaluate its performance
 From the root directory `anlp_claim_verification`:
 ```
 python src/main.py -m 1 -i data/vanilla_wiki_data -o results/ -b 500 -e 500 -l 0.01 -s 5000 -j <..> -a <..>
 python src/main.py -m 1 -i data/extended_wiki_data -o results/ -b 500 -e 500 -l 0.01 -s 5000 -j <..> -a <..>
 ```
-Each of these commands will start the training of the baseline (`-m 1`) model, using either the vanilla dataset (`-i data/vanilla_wiki_data`) or the extended dataset (`-i data/extended_wiki_data`), depositing results, checkpoints and graph summaries into a corresponding folder in results (`-o results/`). Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`) that will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `- a` with any value larger than 1.
+Each of these commands will start the training of the baseline (`-m 1`) model, using either the vanilla dataset (`-i data/vanilla_wiki_data`) or the extended dataset (`-i data/extended_wiki_data`), depositing results, checkpoints, and graph summaries into a corresponding folder in results (`-o results/`). 
+
+Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), and a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`), which will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `- a` followed by any value larger than 1.
 
 ### Step 5: Parse the data and implement the DA model
 From the root directory `anlp_claim_verification`:
@@ -64,4 +66,4 @@ From the root directory `anlp_claim_verification`:
 python src/main.py -m 2 -i data/vanilla_wiki_data -o results/ -b 32 -e 2000 -l 0.05 -s 5000 -j <..> -a <..>
 python src/main.py -m 2 -i data/extended_wiki_data -o results/ -b 32 -e 2000 -l 0.05 -s 5000 -j <..> -a <..>
 ```
-This will begin the training of the decomposable attention model. The batch size has been increased from 4 as proposed in the paper to 32 to provide a more accurate representation of the dataset as a whole. The overall process of manufacturing batches is less costly for this model, so the evaluation batch size could be increased substantially as well to provide more accurate evaluation metrics. Other hyperparameters remain unchanged with regard to Step 4.
+This will begin the training of the decomposable attention model. The batch size has been increased from 4 as proposed in the paper to 32 to provide a more accurate representation of the dataset as a whole. The overall process of manufacturing batches is less costly for this model, so the evaluation batch size could be increased substantially as well to provide more accurate evaluation metrics. Other hyperparameters remain unchanged from Step 4.
