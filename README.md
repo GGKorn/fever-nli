@@ -29,8 +29,8 @@ This model was tested against two types of training data: the vanilla variation 
 ## Implementing the Model
 
 ### Step 1: Download and install necessary items
-1. Run `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_final_project.git`
-2. `cd anlp_final_project`
+1. Run `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_claim_verification.git`
+2. `cd anlp_claim_verification`
 3. Download all packages needed if not currently present on your machine: `pip install -r required_packages.txt`
 
 ### Step 2 (Optional): Compose the datasets
@@ -44,7 +44,7 @@ Alternatively, one could use the pre-cleaned data in the existing `extended_wiki
 *This will yield a total of six files. If any of them are too large for any reason, one could use the split_data.py protocol (this will prompt you for the file you wish to split, the folder these split files will be directed to, the prefix you want on each of these new files, and the number of lines you wish to have in each split of the file)*
 
 ### Step 3: Parse the data and implement the baseline model
-From the `anlp_final_project/src` directory
+From the `anlp_claim_verification/src` directory
 ```
 python input_fnc.py
 python model_fnc.py
@@ -52,7 +52,7 @@ python main.py -m 1
 ```
 
 ### Step 4: Parse the data and implement the DA model
-From the `anlp_final_project/src` directory
+From the `anlp_claim_verification/src` directory
 ```
 python input_da.py
 python model_da.py
