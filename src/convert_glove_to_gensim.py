@@ -1,6 +1,8 @@
 from gensim.scripts.glove2word2vec import glove2word2vec
 import argparse
 
+# python -m gensim.scripts.glove2word2vec -i glove.6B.300d.txt -o glove.6B.300d.word2vec.txt
+
 def convert(**hparams):
     print('[CONVERT] Starting to convert glove embeddings to gensim KeyedVectors encoding')
     glove2word2vec(glove_input_file=hparams['input_dir'], word2vec_output_file=hparams['output_dir'])
