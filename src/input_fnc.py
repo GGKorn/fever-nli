@@ -148,28 +148,3 @@ def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
 if __name__ == "__main__":
     # just for testing or visualisation purpose
     pass
-
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("-f", "--input_file", help="absolute path to the training/test file", required=True)
-    # parser.add_argument("-b", "--max_batches", help="maximum of batches outputed")
-    # parser.add_argument("-s", "--batch_size", help="size of batches outputed", default=64)
-    #
-    #
-    # args = parser.parse_args()
-    # from timeit import default_timer as timer
-    #
-    # start = timer()
-    #
-    # ds_gen = get_dataset_generator(args.input_file, args.batch_size)
-    # i = 0
-    # # (tf_claim, tfidf_sim, tf_evidence), label
-    # for data, labels in ds_gen():
-    #     claims, similarity, evidences = data
-    #     i += 1
-    #     print(i, ":", claims.shape, labels.shape)
-    #     if args.max_batches and i > args.max_batches:
-    #         break
-    #
-    # print("iterations: ", i)
-    # end = timer()
-    # print("Preprocessing and batching took {} seconds".format(end - start))
