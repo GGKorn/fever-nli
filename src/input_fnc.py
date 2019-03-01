@@ -17,7 +17,7 @@ TrainingPath = "train_data_*.csv"
 EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
 
-def get_input_fn(mode=None):
+def get_input_fn_fnc(mode=None):
     """Creates an input function that loads the dataset and prepares it for use."""
 
     def _input_fn(mode=None, params=None):
@@ -120,7 +120,6 @@ def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
 
     # print("loaded {} pairs".format(len(data_frame)))
     return claim_list, evidence_list, document_list, label_list
-
 
 
 if __name__ == "__main__":
