@@ -26,17 +26,19 @@ def get_input_fn_da(mode=None):
     """Creates an input function that loads the mode dependent data set and prepares it for use.
 
     Parameters:
-        mode:   string, "train", "eval" or "predict"
+        mode:   string, "train", "eval" or "predict": determines the data to be loaded
     """
 
     def _input_fn(mode=None, params=None):
         """
+        Returns an (one-shot) iterator containing the batched data
 
         Parameters:
         mode:               string, "train", "eval" or "predict"; decides which data are loaded
-        params.cutoff_len:  int, lenght past which strings are discarded
+        params.cutoff_len:  int, length past which strings are discarded
         params.data_dir:    str or path, directory where data for this mode lay
         params.batch_size:  int, the batch_size the generator yields in
+
         Returns:
             An (one-shot) iterator containing (data, label) tuples
         """
@@ -110,8 +112,12 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
             Looks up the word embeddings for the whole sequence.
             Attention: large sequences are cut of past cutoff_len.
             Otherwise the data would blow up in size through padding.
-            :param target: string, the raw string
-            :return: an array of shape (num_tokens,embedding_size)
+
+            Parameters:
+                target: string, the raw string
+
+            Returns:
+                 An array of shape (num_tokens,embedding_size)
             """
             embedding_list = []
             for i, token in enumerate(target.split()):
@@ -166,10 +172,14 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
 
 def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
     """
+    Reads the data files and returns the relevant data
 
-    :param file_pattern: pattern for finding potentially many files
-    :param concat_evidence: bool, if all potential evidence strings are joined together. currently only True supported
-    :return: tuple of 4 vectors, order claim, evidence, label, verifiable_label
+    Parameters:
+        file_pattern: pattern for finding potentially many files
+        concat_evidence: bool, if all potential evidence strings are joined together. currently only True supported
+
+    Returns:
+         A tuple of 4 vectors, order: claim, evidence, label, verifiable_label
     """
 
     file_list = iglob(file_pattern)

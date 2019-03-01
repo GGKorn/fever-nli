@@ -1,11 +1,9 @@
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-import json
 from sklearn.feature_extraction.text import TfidfVectorizer as TFIDFVec
 from sklearn.feature_extraction.text import CountVectorizer as TFVec
 from sklearn.metrics.pairwise import cosine_similarity
-# import gensim
 from ast import literal_eval
 import os
 import scipy
@@ -18,12 +16,26 @@ EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
 
 def get_input_fn_fnc(mode=None):
-    """Creates an input function that loads the dataset and prepares it for use."""
+    """Creates an input function that loads the data set and prepares it for use.
+
+    Parameters:
+        mode: string, "train", "eval" or "predict": determines the data to be loaded
+
+    """
 
     def _input_fn(mode=None, params=None):
         """
+        Returns an (one-shot) iterator containing the batched data
+
+        Parameters:
+        mode:               string, "train", "eval" or "predict"; decides which data are loaded
+        params.cutoff_len:  int, length past which strings are discarded
+        params.data_dir:    str or path, directory where data for this mode lay
+        params.batch_size:  int, the batch_size the generator yields in
+
         Returns:
             An (one-shot) iterator containing (data, label) tuples
+
         """
         with tf.device('/cpu:0'):
             if mode == 'train':
@@ -61,35 +73,36 @@ def get_input_fn_fnc(mode=None):
 
 
 def get_dataset_generator(file=None, batch_size=500):
+    """
+        Creates python generator that yields preprocessed batches of the dataset for the NLI model.
+        Uses claim TF, evidence TF and TFIDF cosine similarity
+
+        Parameters:
+            file:           filename or name pattern to locate the input files
+            batch_size:     number determining how many data samples get stacked together to form one batch
+
+        Returns:
+            A python generator that yields batches of the data set.
+        """
 
     def _load_nli():
         """
-        yields the data of next claim in order: tf_claim, tfidf_sim, tf_evidence, label
-        :param file:
-        :return:
+        Yields a batch of the data of next claim in order: (tf_claim, tfidf_sim, tf_evidence), label
         """
         claims,evidences,documents,labels = get_claim_evidence_pairs(file)
 
-        # print("fitting TF and tfidf")
         tf_vec = TFVec(stop_words="english", max_features=5000).fit(documents)
         tfidf_vec = TFIDFVec(stop_words="english", max_features=5000).fit(documents)
-        # print("finished fitting")
-        # TODO: store it, so can be called during testing
         del documents
-        # print("transform data")
         tf_claims = tf_vec.transform(claims)
         tf_evidences = tf_vec.transform(evidences)
         tfidf_claims = tfidf_vec.transform(claims)
         tfidf_evidences = tfidf_vec.transform(evidences)
-        # print("transformation done")
-        #print("tfidfs:\n claim: {}\n {},\n evidence: {}\n {}".format(tfidf_claims.shape,tfidf_claims,tfidf_evidences.shape,tfidf_evidences))
 
         batch_start = 0
-        for batch_end in range(500, len(claims), batch_size):
+        for batch_end in range(batch_size, len(claims), batch_size):
 
             tfidf_sims = np.diag(cosine_similarity(tfidf_claims[batch_start:batch_end,], tfidf_evidences[batch_start:batch_end,])).reshape(-1,1)
-
-
 
             yield scipy.sparse.hstack((tf_claims[batch_start:batch_end,], tfidf_sims, tf_evidences[batch_start:batch_end,])).A , labels[batch_start:batch_end]
             batch_start = batch_end
@@ -98,27 +111,35 @@ def get_dataset_generator(file=None, batch_size=500):
 
 
 def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
+    """
+        Reads the data files and returns the relevant data
 
-    # converters: dict, optional
-    #
-    # Dict of functions for converting values in certain columns. Keys can either be integers or column labels.
-    # print("load claim-evidence pairs from {}".format(file))
+        Parameters:
+            file_pattern: pattern for finding potentially many files
+            concat_evidence: bool, if all potential evidence strings are joined together. currently only True supported
+
+        Returns:
+             A tuple of 4 vectors, order: claims, evidences, documents, labels
+    """
+
     converter = {"evidence" : literal_eval}
     file_list = iglob(file_pattern)
     data_frame = pd.concat(pd.read_csv(f, converters=converter) for f in file_list)
 
+    # concatenate evidence string for documents anyway
+    # documents are just used for training the vocabulary
     concatenate = lambda x: " ".join(x)
     evidence_concat = data_frame["evidence"].apply(concatenate)
     document_list = list(evidence_concat + data_frame["claim"])
+
     if concat_evidence:
         evidence_list = list(evidence_concat)
     else:
-        evidence_list = list(data_frame["evidence"])
+        assert False, "No return of separate evidences supported"
 
     claim_list = list(data_frame["claim"])
     label_list = list(data_frame["label"])
 
-    # print("loaded {} pairs".format(len(data_frame)))
     return claim_list, evidence_list, document_list, label_list
 
 
