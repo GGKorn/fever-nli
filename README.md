@@ -22,11 +22,12 @@ This model was tested against two types of training data: the vanilla variation 
 - Vanilla:
 - Extended:
 ### DA Model:
-- Vanilla: 79.48%
-- Extended: 79.43%
+- Vanilla: 0.7948
+- Extended: 0.7943
 
 
 ## Implementing the Model
+Please note that this can be quite lengthy. Python 3.5.4 is required.
 
 ### Step 1: Download and install necessary items
 1. Run `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_claim_verification.git`
