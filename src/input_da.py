@@ -204,7 +204,7 @@ def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--input_file", help="absolute path to the training/test file")
+    parser.add_argument("-f", "--input_file", help="absolute path to the training/test file",required=True)
     parser.add_argument("-b", "--max_batches", help="maximum of batches outputed")
     parser.add_argument("-s", "--batch_size", help="size of batches outputed",default=64)
     parser.add_argument("-v", "--vocab_limit", help="maximum of word embeddings loaded from vocabulary")
@@ -226,6 +226,9 @@ if __name__ == "__main__":
     for a,b,c,d,e,f in ds_gen():
         i += 1
         print(i, ":", a.shape, b.shape, c.shape, d.shape, e.shape, f.shape)
+        if args.max_batches and  i > args.max_batches:
+            break
+
     print("iterations: ", i)
     end = timer()
     print("Preprocessing and batching took {} seconds".format(end - emb))

@@ -143,7 +143,7 @@ def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
     return claim_list, evidence_list, document_list, label_list
 
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
     # local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
     # local_test_path = r"E:\Python\ANLP Final Project\data\vanilla_wiki_data"
     # ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath))
