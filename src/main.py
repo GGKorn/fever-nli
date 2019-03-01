@@ -4,7 +4,7 @@ import tensorflow as tf
 import datetime
 
 # pylint: disable=undefined-variable, import-error
-# from input_tmp import get_input_fn
+
 from input_da import get_input_fn_da
 from input_fnc import get_input_fn_fnc
 from model_fnc import SimpleBaselineModel
@@ -28,11 +28,13 @@ def get_model_fn():
             mode:       instance of tf.estimator.ModeKeys to denote current mode of execution
             params:     optional commandline parameters
         """
-        if params.model_type == 1: # MLP model
+        # selects object constructor based on model type
+        if params.model_type == 1:  # MLP model
             model = SimpleBaselineModel(features, labels, mode, params)
-        else:
+        else:                       # DA model
             model = DecomposibleAttentionModel(features, labels, mode, params)
 
+        # determine purpose of current execution to return estimator specs with relevant tensors
         if mode == tf.estimator.ModeKeys.PREDICT:
             return tf.estimator.EstimatorSpec(mode, predictions=model.predictions)
         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -87,6 +89,7 @@ def main(**hparams):
             hparams=tf.contrib.training.HParams(**hparams)
         )
 
+        # select input function based on model choice, since they are tailored to the model's requirements
         if hparams['model_type'] == 1:
             get_input_fn = get_input_fn_fnc
         elif hparams['model_type'] == 2:
