@@ -4,7 +4,7 @@ import tensorflow as tf
 import datetime
 
 # pylint: disable=undefined-variable, import-error
-# from input_tmp import get_input_fn
+
 from input_da import get_input_fn_da
 from input_fnc import get_input_fn_fnc
 from model_fnc import SimpleBaselineModel
@@ -28,11 +28,13 @@ def get_model_fn():
             mode:       instance of tf.estimator.ModeKeys to denote current mode of execution
             params:     optional commandline parameters
         """
-        if params.model_type == 1: # MLP model
+        # selects object constructor based on model type
+        if params.model_type == 1:  # MLP model
             model = SimpleBaselineModel(features, labels, mode, params)
-        else:
+        else:                       # DA model
             model = DecomposibleAttentionModel(features, labels, mode, params)
 
+        # determine purpose of current execution to return estimator specs with relevant tensors
         if mode == tf.estimator.ModeKeys.PREDICT:
             return tf.estimator.EstimatorSpec(mode, predictions=model.predictions)
         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -87,6 +89,7 @@ def main(**hparams):
             hparams=tf.contrib.training.HParams(**hparams)
         )
 
+        # select input function based on model choice, since they are tailored to the model's requirements
         if hparams['model_type'] == 1:
             get_input_fn = get_input_fn_fnc
         elif hparams['model_type'] == 2:
@@ -98,6 +101,9 @@ def main(**hparams):
             tf.estimator.TrainSpec(input_fn=get_input_fn(mode=tf.estimator.ModeKeys.TRAIN), max_steps=hparams['train_steps']),
             tf.estimator.EvalSpec(input_fn=get_input_fn(mode=tf.estimator.ModeKeys.EVAL), throttle_secs=1, steps=None)
         )
+
+        # Evaluate model performance on the test set after training process finishes
+        classifier.evaluate(input_fn=get_input_fn(mode='predict'), name='test')
 
         tf.logging.info('Finished iteration {} of {}.'.format((i+1), hparams['repeats']))
     tf.logging.info('Finishing execution at {}.\n'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
