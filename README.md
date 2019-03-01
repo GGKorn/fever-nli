@@ -22,8 +22,8 @@ This model was tested against two types of training data: the vanilla variation 
 - Vanilla:
 - Extended:
 ### DA Model:
-- Vanilla:
-- Extended:
+- Vanilla: 79.48%
+- Extended: 79.43%
 
 
 ## Implementing the Model
