@@ -1,0 +1,2 @@
+embed_path : 'E:\Python\ANLP Final Project\data\embedding\gensim_glove.6B.200d.txt'
+embed_dims : 200
