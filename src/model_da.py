@@ -13,21 +13,28 @@ class DecomposibleAttentionModel(object):
         """
         self.hparams        = hparams
         self.mode           = mode
-        self.evidence       = features[1]   # [?, sentence_length, embedding_size], pre-embedded
-        self.evidence_len   = features[2]   # [?, 1], token length of evidence lists
-        self.claims         = features[0]   # [?, sentence_length, embedding_size], pre-embedded
-        self.claims_len     = features[3]   # [?, 1], token length of claim lists
-        self.labels         = labels[0]     # [?, 1], sparse labels
-        self.verifiable     = labels[1]     # [?, 1], whether or not ev-cl pair is verifiable (has enough info)
+        self.evidence       = features[1]   # [?,  sentence_length, embedding_size], pre-embedded
+        self.evidence_len   = features[2]   # [?], token length of evidence lists
+        self.claims         = features[0]   # [?,  sentence_length, embedding_size], pre-embedded
+        self.claims_len     = features[3]   # [?], token length of claim lists
+        self.labels         = labels[0]     # [?], sparse labels
+        self.verifiable     = labels[1]     # [?], whether or not ev-cl pair is verifiable (has enough info)
         self.global_step    = tf.Variable(0, trainable=False, name='global_step')
 
+        # print('evidence\t', self.evidence)
+        # print('claims\t\t', self.claims)
+        # print('evidence_len\t', self.evidence_len)
+        # print('claims_len\t', self.claims_len)
+        # print('labels\t\t', self.labels)
+        # print('verifiable\t', self.verifiable)
+
         # fixed hyperparameters that will not be available via commandline
-        self.embedding_size = 300
         self.hidden_units = 200
         self.l2_lambda = 0.001
         self.clip_gradients = True
         self.clip_norm = 10
         self.dropout_keep_prob = 0.8
+        self.logit_dims = 3
 
         self._build_model(mode)
 
@@ -42,6 +49,7 @@ class DecomposibleAttentionModel(object):
             alpha, beta = self._attend()
             v_1i, v_2j = self._compare(alpha, beta)
             self.logits = self._aggregate(v_1i, v_2j)
+            # print('logits\t\t', self.logits)
 
             with tf.variable_scope('objective'):
                 if mode == tf.estimator.ModeKeys.TRAIN:
@@ -50,7 +58,7 @@ class DecomposibleAttentionModel(object):
                     l2_penalty = tf.multiply(tf.add_n(l2_coefficients), self.l2_lambda)
                 
                 # calculate base xentropy loss, add l2 penalty in case of TRAIN
-                xentropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=self.labels)
+                xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits, labels=self.labels)
                 xentropy = xentropy + l2_penalty if mode == tf.estimator.ModeKeys.TRAIN else xentropy
                 self.loss = tf.reduce_mean(xentropy, name='loss_xentropy')
 
@@ -62,8 +70,16 @@ class DecomposibleAttentionModel(object):
                 }
 
                 # EVAL EstimatorSpec
+                logits_verifiable = tf.cast(tf.greater(predicted_classes, 0), tf.int64)
                 self.eval_metric_ops = {
-                    'accuracy': tf.metrics.accuracy(labels=tf.argmax(self.labels, 1), predictions=predicted_classes)
+                    'accuracy': tf.metrics.accuracy(labels=self.labels, predictions=predicted_classes),
+                    'true_pos': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    'false_pos': tf.metrics.false_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    'true_neg': tf.metrics.true_negatives(labels=self.verifiable, predictions=logits_verifiable),
+                    'false_neg': tf.metrics.false_negatives(labels=self.verifiable, predictions=logits_verifiable),
+                    'recall': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    'precision': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    'f1': tf.contrib.metrics.f1_score(labels=self.verifiable, predictions=logits_verifiable)
                 }
 
             with tf.variable_scope('optimisation'):
@@ -97,8 +113,8 @@ class DecomposibleAttentionModel(object):
             # calculate logarithm of that mask to produce [0, 0, 0, 0, -inf, -inf, -inf]
             # adding -inf to the padded 0's will cancel them out in the softmax calculation
             # because e^(-inf [very small negative]) is basically 0
-            masked_a = tf.add(tf.expand_dims(tf.sequence_mask(self.evidence_len), -1), unnorm_attn_weights)
-            masked_b = tf.add(tf.expand_dims(tf.sequence_mask(self.claims_len), -1), tf.transpose(unnorm_attn_weights, [0, 2, 1]))
+            masked_a = tf.add(tf.expand_dims(tf.sequence_mask(self.evidence_len, self.hparams.cutoff_len, dtype=tf.float32), -1), unnorm_attn_weights)
+            masked_b = tf.add(tf.expand_dims(tf.sequence_mask(self.claims_len, self.hparams.cutoff_len, dtype=tf.float32), -1), tf.transpose(unnorm_attn_weights, [0, 2, 1]))
 
             # compute softmax on true values (sans padding)
             soft_attention_a = tf.nn.softmax(masked_a, name='soft_attention_a')
@@ -184,7 +200,7 @@ class DecomposibleAttentionModel(object):
             if final:
                 with tf.variable_scope('output'):
                     layer = tf.layers.dense(layer,
-                                            self.hparams.logit_dims,
+                                            self.logit_dims,
                                             activation=None,
                                             name='logits')
         return layer
