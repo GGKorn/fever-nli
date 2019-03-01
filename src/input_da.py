@@ -1,7 +1,7 @@
 import os
 import unicodedata
 import numpy as np
-import scipy as sp
+import argparse
 import pandas as pd
 import tensorflow as tf
 from glob import iglob
@@ -13,32 +13,35 @@ TrainingPath = "train_data_*.csv"
 EvalPath = "eval_data_*.csv"
 TestPath = "test_data_*.csv"
 
-# W2V_PATH = r".\embedding\gensim_glove.6B.300d.txt"
+
+
+# alternative path
+#W2V_PATH = r".\embedding\gensim_glove.6B.300d.txt"
 W2V_PATH = r"E:\Python\ANLP Final Project\data\embedding\gensim_glove.6B.200d.txt"
-emb_size = 200
+EMBEDDING_SIZE = 200
 
 global_embedding = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False)
 
-# from https://stackoverflow.com/questions/48057991/get-word-embedding-dictionary-with-glove-python-model
-# model.word_vectors[model.dictionary['samsung']]
-
 def get_input_fn_da(mode=None):
-    """Creates an input function that loads the dataset and prepares it for use."""
+    """Creates an input function that loads the mode dependent data set and prepares it for use.
+
+    Parameters:
+        mode:   string, "train", "eval" or "predict": determines the data to be loaded
+    """
 
     def _input_fn(mode=None, params=None):
         """
+        Returns an (one-shot) iterator containing the batched data
+
+        Parameters:
+        mode:               string, "train", "eval" or "predict"; decides which data are loaded
+        params.cutoff_len:  int, length past which strings are discarded
+        params.data_dir:    str or path, directory where data for this mode lay
+        params.batch_size:  int, the batch_size the generator yields in
+
         Returns:
             An (one-shot) iterator containing (data, label) tuples
         """
-
-        # keep
-        # do processing here
-        #   1. load WE
-        #   2. load data
-        #   3. get indexes of data from WE
-        #   4. save index representaion locally
-        #   5. pass file name to load_fever
-        #   6. load the already indexed data in load_fever
 
         vectors = global_embedding
 
@@ -51,8 +54,8 @@ def get_input_fn_da(mode=None):
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
                     output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64),
-                    output_shapes = ([batch_size, cutoff_len, emb_size], [batch_size, cutoff_len, emb_size],
-                                    [batch_size], [batch_size],[batch_size],[batch_size])
+                    output_shapes = ([batch_size, cutoff_len, EMBEDDING_SIZE], [batch_size, cutoff_len, EMBEDDING_SIZE],
+                                     [batch_size], [batch_size], [batch_size], [batch_size])
                 )
                 dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=10, count=None))
                 dataset = dataset.prefetch(buffer_size=1)
@@ -61,20 +64,18 @@ def get_input_fn_da(mode=None):
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
                     output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64),
-                    output_shapes = ([batch_size, cutoff_len, emb_size], [batch_size, cutoff_len, emb_size],
-                                    [batch_size], [batch_size],[batch_size],[batch_size])
+                    output_shapes = ([batch_size, cutoff_len, EMBEDDING_SIZE], [batch_size, cutoff_len, EMBEDDING_SIZE],
+                                     [batch_size], [batch_size], [batch_size], [batch_size])
                 )
-                # dataset = dataset.shuffle(buffer_size=1)
                 dataset = dataset.prefetch(buffer_size=1)
             elif mode == 'predict':
                 ds_gen = get_dataset_generator(os.path.join(params.data_dir, TestPath), vectors, cutoff_len, params.batch_size)
                 dataset = tf.data.Dataset.from_generator(
                     generator = ds_gen,
                     output_types = (tf.float32, tf.float32, tf.int64, tf.int64, tf.int64, tf.int64),
-                    output_shapes = ([batch_size, cutoff_len, emb_size], [batch_size, cutoff_len, emb_size],
-                                    [batch_size], [batch_size],[batch_size],[batch_size])
+                    output_shapes = ([batch_size, cutoff_len, EMBEDDING_SIZE], [batch_size, cutoff_len, EMBEDDING_SIZE],
+                                     [batch_size], [batch_size], [batch_size], [batch_size])
                 )
-                # dataset = dataset.shuffle(buffer_size=1)
                 dataset = dataset.prefetch(buffer_size=1)
             else:
                 raise ValueError('_input_fn received invalid MODE')
@@ -101,13 +102,23 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
 
     def _load_fever():
         """
-        yields the data of next claim in order: tf_claim, tfidf_sim, tf_evidence, label
-        :param file:
-        :return:
+        Yields batches of claim data. Order: claims, evidences, evidence_length, claim_length, label, verifiablity
+        Shapes in order: 2x (batch_size,embedding_size), 4x (batch_size,)
         """
         claims, evidences, labels, verify_labels = get_fever_claim_evidence_pairs(file)
 
         def lookup_emb(target):
+            """
+            Looks up the word embeddings for the whole sequence.
+            Attention: large sequences are cut of past cutoff_len.
+            Otherwise the data would blow up in size through padding.
+
+            Parameters:
+                target: string, the raw string
+
+            Returns:
+                 An array of shape (num_tokens,embedding_size)
+            """
             embedding_list = []
             for i, token in enumerate(target.split()):
                 # stop before cutoff length to prevent overshooting
@@ -117,9 +128,10 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
                 if token in emb_vectors:
                     embedding_list.append(emb_vectors[token])
                 else:
-                    rand_embed = np.random.uniform(-0.5, 0.5, size=(emb_size))
+                    # use a random uniform vector for tokens not in the vocabulary
+                    rand_embed = np.random.uniform(-0.5, 0.5, size=(EMBEDDING_SIZE))
                     embedding_list.append(rand_embed)
-            return np.array(embedding_list).reshape(-1, emb_size)
+            return np.array(embedding_list).reshape(-1, EMBEDDING_SIZE)
 
         evid_max_len = cutoff_len - 1
         claim_max_len = cutoff_len - 1
@@ -140,14 +152,13 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
 
                 # add zero-pad in front, also helps with empty evidences
                 # zero-pad up to max_sent_length
-                single_evidence_emb = np.pad(single_evidence_emb, ((1, evid_max_len - single_evidence_emb.shape[0]), (0, 0)), mode='constant')
                 single_claim_emb = np.pad(single_claim_emb, ((1, claim_max_len - single_claim_emb.shape[0]), (0, 0)), mode='constant')
+                single_evidence_emb = np.pad(single_evidence_emb, ((1, evid_max_len - single_evidence_emb.shape[0]), (0, 0)), mode='constant')
 
                 # fill batches with embedded sentence
                 emb_claims.append(single_claim_emb)
                 emb_evidence.append(single_evidence_emb)
 
-            # emb_evidence_lens, emb_claim_lens = np.array(emb_evidence_lens).reshape((batch_size,)), np.array(emb_claim_lens).reshape((batch_size,))
             yield   np.stack(emb_claims), \
                     np.stack(emb_evidence), \
                     np.stack(emb_evidence_lens), \
@@ -160,61 +171,61 @@ def get_dataset_generator(file, emb_vectors, cutoff_len, batch_size=32):
 
 
 def get_fever_claim_evidence_pairs(file_pattern,concat_evidence=True):
+    """
+    Reads the data files and returns the relevant data
 
+    Parameters:
+        file_pattern: pattern for finding potentially many files
+        concat_evidence: bool, if all potential evidence strings are joined together. currently only True supported
 
-    # converters: dict, optional
-    #
-    # Dict of functions for converting values in certain columns. Keys can either be integers or column labels.
-    # print("load claim-evidence pairs from {}".format(file))
-    converter = {"evidence": literal_eval}
+    Returns:
+         A tuple of 4 vectors, order: claim, evidence, label, verifiable_label
+    """
+
     file_list = iglob(file_pattern)
+    # converter reads in string in csv cell as list
+    converter = {"evidence": literal_eval}
     data_frame = pd.concat(pd.read_csv(f, converters=converter) for f in file_list)
 
     concatenate = lambda x: " ".join(x)
     evidence_concat = data_frame["evidence"].apply(concatenate)
-    # TODO: check if specifing col is required
-    #ev_len = evidence_concat.map(lambda x: len(x))
-    #max_ev_len = evidence_concat.map(lambda x: len(x.split())).max()
-    #cl_len = data_frame["claim"].map(lambda x: len(x))
-    #max_cl_len = data_frame["claim"].map(lambda x: len(x.split())).max()
     if concat_evidence:
         evidence_list = list(evidence_concat)
     else:
-        assert False, "No retrun of several evidences supported"
-        #evidence_list = list(data_frame["evidence"])
+        assert False, "No return of separate evidences supported"
 
     claim_list = list(data_frame["claim"])
     label_list = list(data_frame["label"])
     verif_list = list(data_frame["verifiable"])
 
-    # print("loaded {} pairs".format(len(data_frame)))
     return claim_list, evidence_list, label_list, verif_list
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--input_file", help="absolute path to the training/test file")
+    parser.add_argument("-b", "--max_batches", help="maximum of batches outputed")
+    parser.add_argument("-s", "--batch_size", help="size of batches outputed",default=64)
+    parser.add_argument("-v", "--vocab_limit", help="maximum of word embeddings loaded from vocabulary")
+
+    args = parser.parse_args()
     from timeit import default_timer as timer
     start = timer()
-    # local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
-    local_test_path = r"E:\Python\ANLP Final Project\data\vanilla_wiki_data"
-    if debug:
-        vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False,limit=debug)
+
+
+    if args.vocab_limit is not None:
+        # loading fewer word vectors speeds up time till the actuall processing starts
+        vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False,limit=args.vocab_limit)
     else:
         vectors = KeyedVectors.load_word2vec_format(W2V_PATH, binary=False)
     emb = timer()
     print('Loading embeddings took {} seconds'.format(emb - start))
-    ds_gen = get_dataset_generator(os.path.join(local_test_path,TestPath),vectors, 400)
+    ds_gen = get_dataset_generator(args.input_file,vectors, args.batch_size)
     i = 0
     for a,b,c,d,e,f in ds_gen():
         i += 1
         print(i, ":", a.shape, b.shape, c.shape, d.shape, e.shape, f.shape)
-        if i > 0:
-            break
     print("iterations: ", i)
     end = timer()
     print("Preprocessing and batching took {} seconds".format(end - emb))
-    # fn = get_input_fn_da()
-    # for itr in fn(mode=tf.estimator.ModeKeys.TRAIN):
-    #     for itm in itr:
-    #         for i in itm:
-    #             print(i)
-    #         break
