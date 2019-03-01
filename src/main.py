@@ -5,8 +5,8 @@ import datetime
 
 # pylint: disable=undefined-variable, import-error
 # from input_tmp import get_input_fn
-from input_da import get_input_fn_fnc
-from input_fnc import get_input_fn_da
+from input_da import get_input_fn_da
+from input_fnc import get_input_fn_fnc
 from model_fnc import SimpleBaselineModel
 from model_da import DecomposibleAttentionModel
 
@@ -99,8 +99,8 @@ def main(**hparams):
             tf.estimator.EvalSpec(input_fn=get_input_fn(mode=tf.estimator.ModeKeys.EVAL), throttle_secs=1, steps=None)
         )
 
-        tf.logging.info('Finished iteration {} of {}.\n'.format((i+1), hparams['repeats']))
-    tf.logging.info('Finishing execution at {}'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
+        tf.logging.info('Finished iteration {} of {}.'.format((i+1), hparams['repeats']))
+    tf.logging.info('Finishing execution at {}.\n'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-u', '--cutoff',
         type=int,
-        default=400,
+        default=500,
         help="Cutoff length of evidence input to prune overly long sentences",
         dest='cutoff_len')
     args = parser.parse_args()
