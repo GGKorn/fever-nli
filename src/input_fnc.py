@@ -144,7 +144,6 @@ def get_claim_evidence_pairs(file_pattern, concat_evidence=True):
 
 
 if __name__ == "__main__":
-    Embedding_Path = None
     # local_test_path = "/workData/Uni/NLP/project/fever-nli/data/vanilla_wiki_data"
     # local_test_path = r"E:\Python\ANLP Final Project\data\vanilla_wiki_data"
     # ds_gen = get_dataset_generator(os.path.join(local_test_path,TrainingPath))
