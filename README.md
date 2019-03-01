@@ -53,7 +53,7 @@ Alternatively, one could use the pre-cleaned data in the existing `extended_wiki
 2. Download and unzip the [GloVe (6B tokens, 400k vocab, 50d-300d) word embeddings](http://nlp.stanford.edu/data/glove.6B.zip): `wget -P http://nlp.stanford.edu/data/glove.6B.zip`
 3. Convert the GloVe embedding to gensim-compatible KeyedVectors format: `python -m gensim.scripts.glove2word2vec -i glove.6B.200d.txt -o gensim_glove.6B.200d.txt`
 4. Repeat this process for other dimensions of the GloVe embeddings you plan to use.
-5. Open config file `anlp_claim_verification/config/config.yaml` and enter the absolute file path of the embedding and its dimension (50, 100, 200, 300). This specifies which embedding will be used by the model during execution.
+5. Open config file `anlp_claim_verification/config/config.yaml` and enter the absolute file path of the embedding and its dimension `(50, 100, 200, 300)`. This specifies which embedding will be used by the model during execution.
 
 ### Step 4: Train the baseline mode and evaluate its performance
 From the root directory `anlp_claim_verification`:
