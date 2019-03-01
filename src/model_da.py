@@ -1,6 +1,10 @@
 import tensorflow as tf
 
 class DecomposibleAttentionModel(object):
+    """
+    Implementation of the model described in "A Decomposible Attention Model for Natural Language Inference", published
+    by Parikh et al. in 2016.
+    """
     def __init__(self, features, labels, mode, hparams):
         """
         Initialises the model with parameters passed from the estimator.
@@ -11,8 +15,8 @@ class DecomposibleAttentionModel(object):
             mode:       tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes purpose of current run
             hparams:    command line arguments specifying hyperparameters
         """
-        self.hparams        = hparams
-        self.mode           = mode
+        self.hparams        = hparams       # model hyperparameters, passed in through the command line
+        self.mode           = mode          # current mode of execution
         self.evidence       = features[1]   # [?,  sentence_length, embedding_size], pre-embedded
         self.evidence_len   = features[2]   # [?], token length of evidence lists
         self.claims         = features[0]   # [?,  sentence_length, embedding_size], pre-embedded
@@ -20,13 +24,6 @@ class DecomposibleAttentionModel(object):
         self.labels         = labels[0]     # [?], sparse labels
         self.verifiable     = labels[1]     # [?], whether or not ev-cl pair is verifiable (has enough info)
         self.global_step    = tf.Variable(0, trainable=False, name='global_step')
-
-        # print('evidence\t', self.evidence)
-        # print('claims\t\t', self.claims)
-        # print('evidence_len\t', self.evidence_len)
-        # print('claims_len\t', self.claims_len)
-        # print('labels\t\t', self.labels)
-        # print('verifiable\t', self.verifiable)
 
         # fixed hyperparameters that will not be available via commandline
         self.hidden_units = 200
@@ -43,14 +40,15 @@ class DecomposibleAttentionModel(object):
         Builds the model and prepares return values for EstimatorSpecs.
 
         Parameters:
-            mode:   tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes purpose of current run
+            mode:   tf.estimator.ModeKeys value [TRAIN, EVAL, PREDICT], denotes mode of execution of current run
         """
         with tf.variable_scope('model'):
+            # Execute the 3-step approach outlined in the paper
             alpha, beta = self._attend()
             v_1i, v_2j = self._compare(alpha, beta)
             self.logits = self._aggregate(v_1i, v_2j)
-            # print('logits\t\t', self.logits)
 
+            # specify the model's objective calculations
             with tf.variable_scope('objective'):
                 if mode == tf.estimator.ModeKeys.TRAIN:
                     # gather l2 coefficients and compute penalty
@@ -72,14 +70,15 @@ class DecomposibleAttentionModel(object):
                 # EVAL EstimatorSpec
                 logits_verifiable = tf.cast(tf.greater(predicted_classes, 0), tf.int64)
                 self.eval_metric_ops = {
-                    'accuracy': tf.metrics.accuracy(labels=self.labels, predictions=predicted_classes),
-                    'true_pos': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'false_pos': tf.metrics.false_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'true_neg': tf.metrics.true_negatives(labels=self.verifiable, predictions=logits_verifiable),
-                    'false_neg': tf.metrics.false_negatives(labels=self.verifiable, predictions=logits_verifiable),
-                    'recall': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'precision': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
-                    'f1': tf.contrib.metrics.f1_score(labels=self.verifiable, predictions=logits_verifiable)
+                    'accuracy': tf.metrics.accuracy(labels=self.labels, predictions=predicted_classes)
+                    # malfunctioning in the current state
+                    # 'true_pos': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'false_pos': tf.metrics.false_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'true_neg': tf.metrics.true_negatives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'false_neg': tf.metrics.false_negatives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'recall': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'precision': tf.metrics.true_positives(labels=self.verifiable, predictions=logits_verifiable),
+                    # 'f1': tf.contrib.metrics.f1_score(labels=self.verifiable, predictions=logits_verifiable)
                 }
 
             with tf.variable_scope('optimisation'):
@@ -94,14 +93,11 @@ class DecomposibleAttentionModel(object):
         """
         Paragraph 3.1 "Attend" from the paper.
 
-        Parameters:
-            e_claims:   embedding vector of the claims
-            e_evidence: embedding vector of the evidence
-
         Returns:
             alpha and beta, soft-aligned vectors
         """
         with tf.variable_scope('attend'):
+            # feed evidence and claims through first part of the network
             f_a = self._dense_layer(self.evidence,  self.hidden_units, 'attend_layers', reuse=False)
             f_b = self._dense_layer(self.claims,    self.hidden_units, 'attend_layers', reuse=True)
 
@@ -131,10 +127,8 @@ class DecomposibleAttentionModel(object):
         Paragraph 3.2 "Compare" from the paper.
         
         Parameters:
-            e_claims:   embedding vector of the claims
-            e_evidence: embedding vector of the evidence
-            alpha:      subphrase of claims that is soft-aligned to the evidence
-            beta:       subphrase of evidence that is soft-aligned to the claims
+            alpha:  subphrase of claims that is soft-aligned to the evidence
+            beta:   subphrase of evidence that is soft-aligned to the claims
 
         Returns:
             comparison-vectors v_1i (G([a_bar, beta])) and v_2j (G([b_bar, alpha]))
@@ -171,8 +165,10 @@ class DecomposibleAttentionModel(object):
 
     def _dense_layer(self, input, size, scope = None, reuse = False, final=False):
         """
-        Constructs the feed-forward blocks used in the paper. Optionally allows re-use to save memory. All layers will
-        be relu-activated, He-initialised (Delving Deep Into Rectifiers, He et al. 2015) and dropout-regularised.
+        Constructs the feed-forward blocks used in the paper. All layers will be relu-activated, He-initialised 
+        (Delving Deep Into Rectifiers, He et al. 2015) and dropout-regularised. Re-use is applied because multiple
+        values (evidence/claim, alpha/beta, v1/v2) are fed into the network per step of computation and not re-using
+        would create a separate layer for each of those forward passes.
 
         Parameters:
             input:  layer input tensor
