@@ -6,7 +6,7 @@ numpy
 unicodedata
 collections
 random
-tensorflow
+tensorflow_gpu=1.10.0
 argparse
 inspect
 input
