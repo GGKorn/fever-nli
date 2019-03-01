@@ -5,7 +5,8 @@ import datetime
 
 # pylint: disable=undefined-variable, import-error
 # from input_tmp import get_input_fn
-from input_fnc import get_input_fn
+from input_da import get_input_fn_fnc
+from input_fnc import get_input_fn_da
 from model_fnc import SimpleBaselineModel
 from model_da import DecomposibleAttentionModel
 
@@ -85,6 +86,11 @@ def main(**hparams):
             run_config=config,
             hparams=tf.contrib.training.HParams(**hparams)
         )
+
+        if hparams['model_type'] == 1:
+            get_input_fn = get_input_fn_fnc
+        elif hparams['model_type'] == 2:
+            get_input_fn = get_input_fn_da
 
         # start training and evaluation loop with estimator
         tf.estimator.train_and_evaluate(
@@ -166,6 +172,12 @@ if __name__ == '__main__':
         help="""\
         This is the inital learning rate value.""",
         dest='learning_rate')
+    parser.add_argument(
+        '-u', '--cutoff',
+        type=int,
+        default=400,
+        help="Cutoff length of evidence input to prune overly long sentences",
+        dest='cutoff_len')
     args = parser.parse_args()
 
     main(**vars(args))
