@@ -63,7 +63,7 @@ python src/main.py -m 1 -i data/extended_wiki_data -o results/ -b 500 -e 500 -l 
 ```
 Each of these commands will start the training of the baseline (`-m 1`) model, using either the vanilla dataset (`-i data/vanilla_wiki_data`) or the extended dataset (`-i data/extended_wiki_data`), depositing results, checkpoints, and graph summaries into a corresponding folder in results (`-o results/`). 
 
-Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), and a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`), which will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `- a` followed by any value larger than 1.
+Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), and a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`), which will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `-a` followed by any value larger than 1.
 
 ### Step 5: Parse the data and implement the DA model
 From the root directory `anlp_claim_verification`:
