@@ -65,7 +65,7 @@ Each of these commands will start the training of the baseline (`-m 1`) model, u
 
 Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), and a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`), which will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `-a` followed by any value larger than 1.
 
-### Step 5: Parse the data and implement the DA model
+### Step 5: Train the Decomposable Attention mode and evaluate its performance
 From the root directory `anlp_claim_verification`:
 ```
 python src/main.py -m 2 -i data/vanilla_wiki_data -o results/ -b 32 -e 2000 -l 0.05 -s 5000 -j <..> -a <..>
