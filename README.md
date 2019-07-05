@@ -34,8 +34,8 @@ This model was tested against two types of training data: the vanilla variation 
 Please note that this process can be quite lengthy. A 64-bit version of Python 3.5.4 is required.
 
 ### Step 1: Download and install necessary items
-1. Clone the repository: `git clone https://gitup.uni-potsdam.de/ANLP_Claim_Verification/anlp_claim_verification.git`
-2. `cd anlp_claim_verification`
+1. Clone the repository: `https://github.com/benjaminhenne/fever-nli.git`
+2. `cd fever-nli`
 3. Supply your Python environment with all packages needed that are not currently present on your machine: `pip install -r required_packages.txt`
 
 ### Step 2 (Optional): Compose the datasets
@@ -56,7 +56,7 @@ Alternatively, one could use the pre-cleaned data in the existing `extended_wiki
 5. Open config file `anlp_claim_verification/config/config.yaml` and enter the absolute file path of the embedding and its dimension `(50, 100, 200, 300)`. This specifies which embedding will be used by the model during execution.
 
 ### Step 4: Train the baseline mode and evaluate its performance
-From the root directory `anlp_claim_verification`:
+From the root directory `fever-nli`:
 ```
 python src/main.py -m 1 -i data/vanilla_wiki_data -o results/ -b 500 -e 500 -l 0.01 -s 5000 -j <..> -a <..>
 python src/main.py -m 1 -i data/extended_wiki_data -o results/ -b 500 -e 500 -l 0.01 -s 5000 -j <..> -a <..>
@@ -66,7 +66,7 @@ Each of these commands will start the training of the baseline (`-m 1`) model, u
 Specific hyperparameters (our configuration) for the run will include a batch size of 500 (`-b 500`), an evaluation batch size of 500 (`-e 500`), and a learning rate of 0.01 (`-l 0.01`). Furthermore, a user-selected job-id needs to be provided (`-j <..>`), which will be used to identify the run in the directory structure of the results. Repetitions (array jobs) of the same job can be requested by supplying `-a` followed by any value larger than 1.
 
 ### Step 5: Train the Decomposable Attention mode and evaluate its performance
-From the root directory `anlp_claim_verification`:
+From the root directory `fever-nli`:
 ```
 python src/main.py -m 2 -i data/vanilla_wiki_data -o results/ -b 32 -e 2000 -l 0.05 -s 5000 -j <..> -a <..>
 python src/main.py -m 2 -i data/extended_wiki_data -o results/ -b 32 -e 2000 -l 0.05 -s 5000 -j <..> -a <..>
